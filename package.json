@@ -1,12 +1,12 @@
 {
   "name": "runebase-exchange-server",
-  "description": "Server that parses, stores, sends, and receives runebase-token-exchange related data from the blockchain.",
+  "description": "Server that parses, stores, sends, and receives runebase-exchange related data from the blockchain.",
   "author": "runebase",
   "license": "LGPL-3.0",
   "version": "0.0.1-c0-d0",
   "repository": "git@github.com:runebase/runebase-exchange-server.git",
   "keywords": [
-    "bodhi",
+    "exchange",
     "server",
     "api",
     "graphql",
@@ -14,10 +14,10 @@
   ],
   "main": "src/index.js",
   "scripts": {
-    "start-test-mon": "nodemon src/index.js --testnet --dev --encryptok --passphrase=xxx --runebasepath=./runebase/linux64/bin --rpcpassword=runebaseprediction",
-    "start-test": "node src/index.js --testnet --dev --encryptok --passphrase=xxx --runebasepath=./runebase/linux64/bin --rpcpassword=runebaseprediction",
-    "start-main": "node src/index.js --mainnet --dev --passphrase=xxx --runebasepath=./runebase/linux64/bin --rpcpassword=runebaseprediction",
-    "test": "mocha --recursive src/**/*.tests.js --timeout 10000 --rpcpassword=runebaseprediction --test --runebasepath=/home/bago/runebase-exchange-server/runebase/linux64/bin",
+    "start-test-mon": "nodemon src/index.js --testnet --dev --encryptok --passphrase=xxx --runebasepath=./runebase/linux64/bin --rpcpassword=runebaseexchange",
+    "start-test": "node src/index.js --testnet --dev --encryptok --passphrase=xxx --runebasepath=./runebase/linux64/bin --rpcpassword=runebaseexchange",
+    "start-main": "node src/index.js --mainnet --dev --passphrase=xxx --runebasepath=./runebase/linux64/bin --rpcpassword=runebaseexchange",
+    "test": "mocha --recursive src/**/*.tests.js --timeout 10000 --rpcpassword=runebaseexchange --test --runebasepath=/home/bago/runebase-exchange-server/runebase/linux64/bin",
     "lint:fix": "eslint --fix -- src/."
   },
   "dependencies": {
@@ -62,7 +62,7 @@
     {
       "name": "Jonas Collier",
       "email": "support@runebase.io",
-      "url": "https://www.runbebase.io/"
+      "url": "https://www.runebase.io/"
     }
   ]
 }
