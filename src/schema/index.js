@@ -87,7 +87,6 @@ type Transaction {
   receiverAddress: String
   name: String
   options: [String!]
-  optionIdx: Int
   token: _TokenType
   amount: String
 }
@@ -443,9 +442,6 @@ input MarketFilter {
   volume: String
 }
 
-
-
-
 input TransactionFilter {
   OR: [TransactionFilter!]
   type: _TransactionType
@@ -455,13 +451,6 @@ input TransactionFilter {
 }
 
 type Mutation {
-  withdraw(
-    type: _TransactionType!
-    version: Int!
-    senderAddress: String!
-    topicAddress: String!
-  ): Transaction
-
   transfer(
     senderAddress: String!
     receiverAddress: String!
@@ -536,12 +525,6 @@ type AddressBalance {
   exchangefun: String!,
 }
 
-enum _ModelMutationType {
-  CREATED
-  UPDATED
-  DELETED
-}
-
 enum _OrderStatusType {
   FULFILLED
   ACTIVE
@@ -574,7 +557,6 @@ enum _OrderDirection {
 }
 
 enum _TransactionType {
-  WITHDRAW
   TRANSFER
   DEPOSITEXCHANGE
   WITHDRAWEXCHANGE

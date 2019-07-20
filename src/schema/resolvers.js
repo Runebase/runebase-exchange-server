@@ -8,8 +8,9 @@ const { getLogger } = require('../utils/logger');
 const blockchain = require('../api/blockchain');
 const network = require('../api/network');
 const wallet = require('../api/wallet');
-const runebasePredictionToken = require('../api/runebaseprediction_token');
+const predictionToken = require('../api/prediction_token');
 const funToken = require('../api/fun_token');
+const Token = require('../api/token');
 const { Config, getContractMetadata } = require('../config');
 const { db, DBHelper } = require('../db');
 const { txState, phase, orderState, SATOSHI_CONVERSION } = require('../constants');
@@ -39,9 +40,9 @@ function buildCursorOptions(cursor, orderBy, limit, skip) {
 
 
 function buildTransactionFilters({
-  OR = [], type, status, topicAddress, oracleAddress, senderAddress, senderQAddress,
+  OR = [], type, status, senderAddress, senderQAddress,
 }) {
-  const filter = (type || status || topicAddress || oracleAddress || senderAddress || senderQAddress) ? {} : null;
+  const filter = (type || status || senderAddress || senderQAddress) ? {} : null;
 
   if (type) {
     filter.type = type;
@@ -49,14 +50,6 @@ function buildTransactionFilters({
 
   if (status) {
     filter.status = status;
-  }
-
-  if (topicAddress) {
-    filter.topicAddress = topicAddress;
-  }
-
-  if (oracleAddress) {
-    filter.oracleAddress = oracleAddress;
   }
 
   if (senderAddress) {
@@ -422,14 +415,14 @@ module.exports = {
         case 'PRED': {
           // Send transfer tx
           try {
-            sentTx = await runebasePredictionToken.transfer({
+            sentTx = await predictionToken.transfer({
               to: receiverAddress,
               value: amount,
               senderAddress,
             });
             txid = sentTx.txid;
           } catch (err) {
-            getLogger().error(`Error calling RunebasePredictionToken.transfer: ${err.message}`);
+            getLogger().error(`Error calling PredictionToken.transfer: ${err.message}`);
             throw err;
           }
           break;
@@ -486,55 +479,40 @@ module.exports = {
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
       let sentTx;
-      switch (token) {
-        case 'RUNES': {
-          // Send sendToAddress tx
-          try {
-            txid = await exchange.fundExchangeRunes({
-              exchangeAddress,
-              amount,
-              senderAddress,
-            });
-          } catch (err) {
-            getLogger().error(`Error calling exchange.fund: ${err.message}`);
-            throw err;
-          }
-          break;
-        }
-        case 'PRED': {
-          // Send transfer tx
-          try {
-            sentTx = await runebasePredictionToken.transfer({
-              to: exchangeAddress,
-              value: amount,
-              senderAddress,
-            });
-            txid = sentTx.txid;
-          } catch (err) {
-            getLogger().error(`Error calling RunebasePredictionToken.transfer: ${err.message}`);
-            throw err;
-          }
-          break;
-        }
-        case 'FUN': {
-          // Send transfer tx
-          try {
-            sentTx = await funToken.transfer({
-              to: exchangeAddress,
-              value: amount,
-              senderAddress,
-            });
-            txid = sentTx.txid;
-          } catch (err) {
-            getLogger().error(`Error calling FunToken.transfer: ${err.message}`);
-            throw err;
-          }
-          break;
-        }
-        default: {
-          throw new Error(`Invalid token transfer type: ${token}`);
+
+      if (token == "RUNES") {
+        try {
+          txid = await exchange.fundExchangeRunes({
+            exchangeAddress,
+            amount,
+            senderAddress,
+          });
+        } catch (err) {
+          getLogger().error(`Error calling exchange.fund: ${err.message}`);
+          throw err;
         }
       }
+      for(key in metadata['Tokens']){
+        if (token == metadata['Tokens'][key]['pair']) {
+          try {
+            sentTx = await Token.transfer({
+              to: exchangeAddress,
+              value: amount,
+              senderAddress,
+              token: metadata['Tokens'][key]['pair'],
+              tokenAddress: metadata['Tokens'][key]['address'],
+              abi: metadata['Tokens'][key]['abi'],
+              RrcVersion: metadata['Tokens'][key]['rrc'],
+            });
+            txid = sentTx.txid;
+          } catch (err) {
+            getLogger().error(`Error calling Token.transfer: ${err.message}`);
+            throw err;
+          }
+        }
+      }
+      // Insert if lodash loop over metadata['Tokens'] does not contain ['pair'] of var token then throw error?
+
       let xAmount
       if (token == 'RUNES') {
         xAmount = amount
@@ -600,7 +578,7 @@ module.exports = {
         case 'PRED': {
           // Send transfer tx
           try {
-            tokenaddress = metadata.RunebasePredictionToken.address;
+            tokenaddress = metadata.Tokens.PredictionToken.address;
             txid = await exchange.redeemExchange({
               exchangeAddress,
               amount,
@@ -617,7 +595,7 @@ module.exports = {
         case 'FUN': {
           // Send transfer tx
           try {
-            tokenaddress = metadata.FunToken.address;
+            tokenaddress = metadata.Tokens.FunToken.address;
             txid = await exchange.redeemExchange({
               exchangeAddress,
               amount,
@@ -687,9 +665,9 @@ module.exports = {
         case 'PRED': {
           // Send transfer tx
           try {
-            tokenaddress = metadata.RunebasePredictionToken.address;
+            tokenaddress = metadata.Tokens.PredictionToken.address;
           } catch (err) {
-            getLogger().error(`Error calling metadata.RunebasePredictionToken.address: ${err.message}`);
+            getLogger().error(`Error calling metadata.Tokens.PredictionToken.address: ${err.message}`);
             throw err;
           }
           break;
@@ -697,9 +675,9 @@ module.exports = {
         case 'FUN': {
           // Send transfer tx
           try {
-            tokenaddress = metadata.FunToken.address;
+            tokenaddress = metadata.Tokens.FunToken.address;
           } catch (err) {
-            getLogger().error(`Error calling metadata.FunToken.address: ${err.message}`);
+            getLogger().error(`Error calling metadata.Tokens.FunToken.address: ${err.message}`);
             throw err;
           }
           break;

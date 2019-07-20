@@ -12,12 +12,12 @@ class Market {
 
   decode() {
     const metadata = getContractMetadata();
-    for (var key in metadata){
-      if (metadata[key].pair === this.market) {
+    for (var key in metadata['Tokens']){
+      if (metadata['Tokens'][key]['pair'] === this.market) {
         if (key !== 'Runebase') {
-          this.tokenName = metadata[key].tokenName;
-        }        
-      }     
+          this.tokenName = metadata['Tokens'][key]['tokenName'];
+        }
+      }
     }
   }
 

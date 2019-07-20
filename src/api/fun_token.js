@@ -6,7 +6,7 @@ const Utils = require('../utils');
 
 function getContract() {
   const metadata = getContractMetadata();
-  return new Contract(getRunebaseRPCAddress(), metadata.FunToken.address, metadata.FunToken.abi);
+  return new Contract(getRunebaseRPCAddress(), metadata.Tokens.FunToken.address, metadata.Tokens.FunToken.abi);
 }
 
 const FunToken = {
@@ -104,7 +104,7 @@ const FunToken = {
     return res;
   },
 
-  
+
 };
 
 module.exports = FunToken;

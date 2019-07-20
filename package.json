@@ -16,7 +16,7 @@
   "scripts": {
     "start-test-mon": "nodemon src/index.js --testnet --dev --encryptok --passphrase=xxx --runebasepath=./runebase/linux64/bin --rpcpassword=runebaseexchange",
     "start-test": "node src/index.js --testnet --dev --encryptok --passphrase=xxx --runebasepath=./runebase/linux64/bin --rpcpassword=runebaseexchange",
-    "start-main": "node src/index.js --mainnet --dev --passphrase=xxx --runebasepath=./runebase/linux64/bin --rpcpassword=runebaseexchange",
+    "start-main": "nodemon src/index.js --mainnet --dev --passphrase=xxx --runebasepath=./runebase/linux64/bin --rpcpassword=runebaseexchange",
     "test": "mocha --recursive src/**/*.tests.js --timeout 10000 --rpcpassword=runebaseexchange --test --runebasepath=/home/bago/runebase-exchange-server/runebase/linux64/bin",
     "lint:fix": "eslint --fix -- src/."
   },

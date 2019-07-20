@@ -4,8 +4,6 @@ const moment = require('moment');
 const { getLogger } = require('../utils/logger');
 const blockchain = require('../api/blockchain');
 const wallet = require('../api/wallet');
-const runebasePredictionToken = require('../api/runebaseprediction_token');
-const funToken = require('../api/fun_token');
 const { DBHelper } = require('../db');
 const { Config, getContractMetadata } = require('../config');
 const { txState, orderState } = require('../constants');
@@ -354,35 +352,6 @@ async function updateDB(tx, db) {
       throw err;
     }
   }
-}
-
-// Failed approve tx so call approve for 0.
-async function resetApproveAmount(db, tx, spender) {
-  let sentTx;
-  try {
-    sentTx = await runebasePredictionToken.approve({
-      spender,
-      value: 0,
-      senderAddress: tx.senderAddress,
-    });
-  } catch (err) {
-    getLogger().error(`Error calling RunebasePredictionToken.approve: ${err.message}`);
-    throw err;
-  }
-
-  await DBHelper.insertTransaction(db.Transactions, {
-    txid: sentTx.txid,
-    type: 'RESETAPPROVE',
-    status: txState.PENDING,
-    gasLimit: sentTx.args.gasLimit.toString(10),
-    gasPrice: sentTx.args.gasPrice.toFixed(8),
-    createdTime: moment().unix(),
-    version: tx.version,
-    senderAddress: tx.senderAddress,
-    topicAddress: tx.topicAddress,
-    oracleAddress: tx.oracleAddress,
-    name: tx.name,
-  });
 }
 
 

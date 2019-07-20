@@ -21,7 +21,7 @@ const Trade = require('../models/trade');
 const MarketMaker = require('../models/marketMaker');
 const FundRedeem = require('../models/fundRedeem');
 const OrderFulfilled = require('../models/orderFulfilled');
-const runebasePredictionToken = require('../api/runebaseprediction_token');
+const predictionToken = require('../api/prediction_token');
 const funToken = require('../api/fun_token');
 const wallet = require('../api/wallet');
 const network = require('../api/network');
@@ -78,13 +78,12 @@ function sequentialLoop(iterations, process, exit) {
 const startSync = () => {
   contractMetadata = getContractMetadata();
   senderAddress = isMainnet() ? 'RKBLGRvYqunBtpueEPuXzQQmoVsQQTvd3a' : '5VMGo2gGHhkW5TvRRtcKM1RkyUgrnNP7dn';
+
   sync(db);
 };
 
 async function sync(db) {
   const removeHexPrefix = true;
-  const topicsNeedBalanceUpdate = new Set();
-  const oraclesNeedBalanceUpdate = new Set();
 
   const currentBlockCount = Math.max(0, await getInstance().getBlockCount());
   const currentBlockHash = await getInstance().getBlockHash(currentBlockCount);
@@ -137,6 +136,7 @@ async function sync(db) {
       await syncTrade(db, startBlock, endBlock, removeHexPrefix);
       getLogger().debug('Synced syncTrade');
 
+
       const { insertBlockPromises } = await getInsertBlockPromises(db, startBlock, endBlock);
       await Promise.all(insertBlockPromises);
       getLogger().debug('Inserted Blocks');
@@ -145,10 +145,25 @@ async function sync(db) {
       loop.next();
     },
     async () => {
-      getLogger().debug('Up');
+      if (numOfIterations > 0) {
+          sendSyncInfo(
+            currentBlockCount,
+            currentBlockTime,
+            await calculateSyncPercent(currentBlockCount, currentBlockTime),
+            await network.getPeerNodeCount(),
+            await getAddressBalances(),
+          );
+        }
+
+        // nedb doesnt require close db, leave the comment as a reminder
+        // await db.Connection.close();
+        getLogger().debug('sleep');
+        setTimeout(startSync, 5000);
+      // execute rpc batch by batch
     },
   );
 }
+
 
 // Gets all promises for new blocks to insert
 async function getInsertBlockPromises(db, startBlock, endBlock) {
@@ -227,7 +242,6 @@ function sendSyncInfo(syncBlockNum, syncBlockTime, syncPercent, peerNodeCount, a
   });
 }
 
-
 async function getAddressBalances() {
   const addressObjs = [];
   const addressList = [];
@@ -262,7 +276,7 @@ async function getAddressBalances() {
         const getPredBalancePromise = new Promise(async (getPredBalanceResolve) => {
           let predBalance = new BigNumber(0);
           try {
-            const resp = await runebasePredictionToken.balanceOf({
+            const resp = await predictionToken.balanceOf({
               owner: address,
               senderAddress: address,
             });
@@ -328,7 +342,7 @@ async function getAddressBalances() {
           try {
             const hex = await getInstance().getHexAddress(address);
             const resp = await exchange.balanceOf({
-              token: contractMetadata.RunebasePredictionToken.address,
+              token: contractMetadata.Tokens.PredictionToken.address,
               user: hex,
               senderAddress: address,
             });
@@ -352,7 +366,7 @@ async function getAddressBalances() {
           try {
             const hex = await getInstance().getHexAddress(address);
             const resp = await exchange.balanceOf({
-              token: contractMetadata.FunToken.address,
+              token: contractMetadata.Tokens.FunToken.address,
               user: hex,
               senderAddress: address,
             });
@@ -695,8 +709,8 @@ async function syncMarkets(db, startBlock, endBlock, removeHexPrefix) {
       let volume = 0;
       let filled = 0;
       let minSellPrice = 0;
-      for (var key in metadata){
-        if (metadata[key].pair) {
+      for (var key in metadata['Tokens']){
+        if (metadata['Tokens'][key]['pair']) {
           if (key !== 'Runebase') {
             change = 0;
             volume = 0;
@@ -704,13 +718,13 @@ async function syncMarkets(db, startBlock, endBlock, removeHexPrefix) {
             minSellPrice = 0;
             const unixTime = Date.now();
             var inputDate = unixTime - 84600000; // 24 hours
-            const pair = metadata[key].pair;
+            const pair = metadata['Tokens'][key]['pair'];
             const trades = await DBHelper.find(
                     db.Trade,
                       {
                         $and: [
                         { 'date': { $gt: new Date(inputDate) } },
-                        { tokenName: metadata[key].pair },
+                        { tokenName: metadata['Tokens'][key]['pair'] },
                         ]
                       },
                     ['time', 'tokenName', 'date', 'price', 'amount', 'orderType', 'boughtTokens', 'soldTokens'],
@@ -737,7 +751,7 @@ async function syncMarkets(db, startBlock, endBlock, removeHexPrefix) {
                     db.NewOrder,
                       {
                         $and: [
-                        { tokenName: metadata[key].pair },
+                        { tokenName: metadata['Tokens'][key]['pair'] },
                         { status: orderState.ACTIVE },
                         { orderType: 'SELLORDER' },
                         ]
@@ -749,10 +763,10 @@ async function syncMarkets(db, startBlock, endBlock, removeHexPrefix) {
 
             }
             const obj = {
-              market: metadata[key].pair,
+              market: metadata['Tokens'][key]['pair'],
               change: change.toFixed(2),
               volume,
-              tokenName: metadata[key].tokenName,
+              tokenName: metadata['Tokens'][key]['tokenName'],
               price: minSellPrice,
             }
             await DBHelper.updateMarketsByQuery(db.Markets, { market: obj.market }, obj);

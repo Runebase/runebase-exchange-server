@@ -6,10 +6,10 @@ const Utils = require('../utils');
 
 function getContract() {
   const metadata = getContractMetadata();
-  return new Contract(getRunebaseRPCAddress(), metadata.RunebasePredictionToken.address, metadata.RunebasePredictionToken.abi);
+  return new Contract(getRunebaseRPCAddress(), metadata.Tokens.PredictionToken.address, metadata.Tokens.PredictionToken.abi);
 }
 
-const RunebasePredictionToken = {
+const PredictionToken = {
   async approve(args) {
     const {
       spender, // address
@@ -105,4 +105,4 @@ const RunebasePredictionToken = {
   },
 };
 
-module.exports = RunebasePredictionToken;
+module.exports = PredictionToken;

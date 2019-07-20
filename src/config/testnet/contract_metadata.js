@@ -19,7 +19,7 @@ module.exports = {
       Deposit: 'dcbc1c05240f31ff3ad067ef1ee35ce4997762752e3a095284754544f4c709d7',
       Withdrawal: 'c2b4a290c20fb28939d29f102514fbffd2b73c059ffba8b78250c94161d5fcc6',
     },
-    RunebasePredictionToken: {
+    PredictionToken: {
       pair: 'PRED',
       tokenName: 'Prediction Token',
       address: 'a7489701415b46bdbd7e91dc5164cb50ae5dfe8f',

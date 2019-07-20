@@ -8,8 +8,9 @@ const Utils = require('./utils');
 const EmitterHelper = require('./utils/emitterHelper');
 const { getLogger } = require('./utils/logger');
 const Blockchain = require('./api/blockchain');
-const RunebasePredictionToken = require('./api/runebaseprediction_token');
+const PredictionToken = require('./api/prediction_token');
 const FunToken = require('./api/fun_token');
+const Token = require('./api/token');
 const RunebaseUtils = require('./api/runebase_utils');
 const Transaction = require('./api/transaction');
 const Wallet = require('./api/wallet');
@@ -35,8 +36,9 @@ module.exports = {
   EmitterHelper,
   getLogger,
   Blockchain,
-  RunebasePredictionToken,
+  PredictionToken,
   FunToken,
+  Token,
   RunebaseUtils,
   Transaction,
   Wallet,

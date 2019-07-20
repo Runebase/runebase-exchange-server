@@ -10,12 +10,12 @@ function getContract() {
 }
 function getContractToken(tokenChoice) {
   const metadata = getContractMetadata();
-  const func = new Function("new Contract(getRunebaseRPCAddress()," + metadata + "." + tokenChoice + ".address, " + metadata + "." + tokenChoice + ".abi);")();
+  const func = new Function("new Contract(getRunebaseRPCAddress()," + metadata + ".Tokens." + tokenChoice + ".address, " + metadata + ".Tokens." + tokenChoice + ".abi);")();
   return func();
 }
 function getContractpred() {
   const metadata = getContractMetadata();
-  return new Contract(getRunebaseRPCAddress(), metadata.RunebasePredictionToken.address, metadata.RunebasePredictionToken.abi);
+  return new Contract(getRunebaseRPCAddress(), metadata.Tokens.PredictionToken.address, metadata.Tokens.PredictionToken.abi);
 }
 const Exchange = {
 
@@ -46,7 +46,7 @@ const Exchange = {
     const {
       exchangeAddress, // address
       amount,
-      senderAddress,    
+      senderAddress,
     } = args;
     if (_.isUndefined(senderAddress)) {
       throw new TypeError('senderAddress needs to be defined');
@@ -72,7 +72,7 @@ const Exchange = {
       amount,
       token,
       tokenaddress,
-      senderAddress,    
+      senderAddress,
     } = args;
     if (_.isUndefined(senderAddress)) {
       throw new TypeError('senderAddress needs to be defined');
@@ -90,14 +90,14 @@ const Exchange = {
     else {
       calculatedAmount = amount;
     }
-    
+
     const res = await getContract().send('redeem', {
       methodArgs: [tokenaddress, calculatedAmount],
       senderAddress,
     });
     return res.txid;
   },
-  
+
   async orderExchange(args) {
     const {
       exchangeAddress, // address
@@ -107,8 +107,8 @@ const Exchange = {
       senderAddress,
       priceFractN,
       priceFractD,
-      orderType,    
-    } = args;    
+      orderType,
+    } = args;
     if (_.isUndefined(senderAddress)) {
       throw new TypeError('senderAddress needs to be defined');
     }
@@ -140,14 +140,14 @@ const Exchange = {
         methodArgs: [tokenaddress, "0000000000000000000000000000000000000000", amount, priceFractN, priceFractD],
         senderAddress,
       });
-    }    
+    }
     return res.txid;
   },
   async cancelOrderExchange(args) {
     const {
       exchangeAddress, // address
       senderAddress,
-      orderId,   
+      orderId,
     } = args;
     if (_.isUndefined(exchangeAddress)) {
       throw new TypeError('exchangeAddress needs to be defined');
@@ -163,7 +163,7 @@ const Exchange = {
       methodArgs: [orderId],
       senderAddress,
     });
-        
+
     return res.txid;
   },
 
@@ -172,7 +172,7 @@ const Exchange = {
       exchangeAddress, // address
       senderAddress,
       orderId,
-      exchangeAmount   
+      exchangeAmount
     } = args;
     if (_.isUndefined(exchangeAddress)) {
       throw new TypeError('exchangeAddress needs to be defined');
@@ -189,7 +189,7 @@ const Exchange = {
     res = await getContract().send('executeOrder', {
       methodArgs: [orderId, exchangeAmount],
       senderAddress,
-    });   
+    });
     return res.txid;
   },
 
