@@ -164,6 +164,7 @@ const Token = {
     });
     res[0] = Utils.hexToDecimalString(res[0]);
     res.balance = Utils.hexToDecimalString(res.balance);
+    console.log(res.balance + ' res.balance');
     return res;
   },
 };

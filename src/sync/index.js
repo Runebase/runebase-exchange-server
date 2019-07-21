@@ -21,8 +21,7 @@ const Trade = require('../models/trade');
 const MarketMaker = require('../models/marketMaker');
 const FundRedeem = require('../models/fundRedeem');
 const OrderFulfilled = require('../models/orderFulfilled');
-const predictionToken = require('../api/prediction_token');
-const funToken = require('../api/fun_token');
+const Token = require('../api/token');
 const wallet = require('../api/wallet');
 const network = require('../api/network');
 const exchange = require('../api/exchange');
@@ -265,138 +264,158 @@ async function getAddressBalances() {
   const addressBatches = _.chunk(addressList, RPC_BATCH_SIZE);
   await new Promise(async (resolve) => {
     sequentialLoop(addressBatches.length, async (loop) => {
-      const getPredBalancePromises = [];
-      const getFunBalancePromises = [];
-      const getRunesExchangeBalancePromises = [];
-      const getPredExchangeBalancePromises = [];
-      const getFunExchangeBalancePromises = [];
-
       _.map(addressBatches[loop.iteration()], async (address) => {
-        // Get PRED balance
-        const getPredBalancePromise = new Promise(async (getPredBalanceResolve) => {
-          let predBalance = new BigNumber(0);
-          try {
-            const resp = await predictionToken.balanceOf({
-              owner: address,
-              senderAddress: address,
-            });
+        const ExchangeTokenBalances = async () => {
+          await new Promise( async (ExchangeTokenBalancesParentResolver) => {
+            console.log('Start ExchangeTokenBalances');
+            let size = Object.keys(contractMetadata['Tokens']).length;
+            let ExchangeTokenCounter = 0;
+            for (ExchangeTokenName in contractMetadata['Tokens']) {
+              await new Promise(async function(ExchangeTokenBalanceResolver, reject) {
+                let ExchangeTokenBalance = new BigNumber(0);
+                getLogger().debug('TokenName: ' + ExchangeTokenName);
+                getLogger().debug(contractMetadata['Tokens'][ExchangeTokenName]['pair']);
+                getLogger().debug(contractMetadata['Tokens'][ExchangeTokenName]['address']);
+                try {
+                  const hex = await getInstance().getHexAddress(address);
+                  const resp = await exchange.balanceOf({
+                    token: contractMetadata['Tokens'][ExchangeTokenName]['address'],
+                    user: hex,
+                    senderAddress: address,
+                  });
+                  ExchangeTokenBalance = resp.balance;
+                } catch (err) {
+                  getLogger().error(`BalanceOf ${address}: ${err.message}`);
+                  ExchangeTokenBalance = '0';
+                }
+                const found = await _.find(addressObjs, { address });
+                const lowerPair = await contractMetadata['Tokens'][ExchangeTokenName]['pair'].toLowerCase();
+                const exchangePair = 'exchange' + lowerPair;
+                found[exchangePair] = ExchangeTokenBalance.toString(10);
+                ExchangeTokenCounter++;
+                if (ExchangeTokenCounter == Object.keys(contractMetadata['Tokens']).length) {
+                  getLogger().debug('Exchange Token Parent Done');
+                  ExchangeTokenBalancesParentResolver();
+                }
+                ExchangeTokenBalanceResolver();
+              });
+            }
+          })
+          .catch(()=> {
+            getLogger().error('exchangeBalances Error');
+            throw 'exchangeBalances';
+          });
+        }
 
-            predBalance = resp.balance;
-          } catch (err) {
-            getLogger().error(`BalanceOf ${address}: ${err.message}`);
-            predBalance = '0';
-          }
+        const WalletTokenBalances = async () => {
+          await new Promise( async (WalletTokenBalancesParentResolver) => {
+            getLogger().debug('Start WalletTokenBalances');
+            let size = Object.keys(contractMetadata['Tokens']).length;
+            let ExchangeTokenCounter = 0;
+            for (WalletTokenName in contractMetadata['Tokens']) {
+              await new Promise(async function(WalletTokenBalanceResolver, reject) {
+                let Balance = new BigNumber(0);
+                getLogger().debug(WalletTokenName);
+                getLogger().debug(contractMetadata['Tokens'][WalletTokenName]['pair']);
+                getLogger().debug(contractMetadata['Tokens'][WalletTokenName]['address']);
+                try {
+                  const resp = await Token.balanceOf({
+                    owner: address,
+                    senderAddress: address,
+                    token: contractMetadata['Tokens'][WalletTokenName]['pair'],
+                    tokenAddress: contractMetadata['Tokens'][WalletTokenName]['address'],
+                    abi: contractMetadata['Tokens'][WalletTokenName]['abi'],
+                    RrcVersion: contractMetadata['Tokens'][WalletTokenName]['rrc'],
+                  });
+                  Balance = resp.balance;
+                } catch (err) {
+                  getLogger().error(`BalanceOf ${address}: ${err.message}`);
+                  Balance = '0';
 
-          // Update PRED balance for address
-          const found = _.find(addressObjs, { address });
-          found.pred = predBalance.toString(10);
+                }
+                const found = await _.find(addressObjs, { address });
+                const lowerPair = await contractMetadata['Tokens'][WalletTokenName]['pair'].toLowerCase();
+                found[lowerPair] = Balance.toString(10);
+                ExchangeTokenCounter++;
+                if (ExchangeTokenCounter == Object.keys(contractMetadata['Tokens']).length) {
+                  getLogger().debug('Wallet Token Parent Done');
+                  WalletTokenBalancesParentResolver();
+                }
+                WalletTokenBalanceResolver();
+              });
+            }
+          })
+          .catch(()=> {
+            getLogger().error('walletBalances Error');
+            throw 'walletBalances';
+          });
+        }
 
-          getPredBalanceResolve();
+        const ExchangeBaseCurrencyBalance = async () => {
+          await new Promise( async (ExchangeBaseCurrencyBalanceParentResolve) => {
+            let RunesExchangeBalance = new BigNumber(0);
+            try {
+              const hex = await getInstance().getHexAddress(address);
+              const resp = await exchange.balanceOf({
+                token: contractMetadata['BaseCurrency']['address'],
+                user: hex,
+                senderAddress: address,
+              });
+              runesExchangeBalance = resp.balance;
+            } catch (err) {
+              getLogger().error(`BalanceOf ${address}: ${err.message}`);
+              runesExchangeBalance = '0';
+            }
+
+            // Update Runes balance for address
+            const found = _.find(addressObjs, { address });
+            found.exchangerunes = runesExchangeBalance.toString(10);
+            ExchangeBaseCurrencyBalanceParentResolve();
+          })
+          .catch(()=> {
+            console.log('ExchangeBaseCurrencyBalances Error');
+            throw 'ExchangeBaseCurrencyBalances';
+          });
+        }
+
+        const WalletBaseCurrencyBalance = async () => {
+          await new Promise( (WalletBaseCurrencyBalanceResolve, reject) => {
+            console.log('ExchangeTokenBalances done');
+            WalletBaseCurrencyBalanceResolve();
+          })
+          .catch(()=> {
+            console.log('WalletBaseCurrencyBalances Error');
+            throw 'WalletBaseCurrencyBalances';
+          });
+        }
+
+        const handleRejection = async (p) => {
+            return p.catch(err=> ({ error: err }));
+        }
+
+        async function FetchBalances(arr) {
+          console.log('FetchBalances: ');
+          return await Promise.all(
+            [
+              WalletTokenBalances(),
+              ExchangeTokenBalances(),
+              ExchangeBaseCurrencyBalance(),
+              WalletBaseCurrencyBalance(),
+            ]
+            .map(handleRejection)
+          );
+        }
+
+        FetchBalances().then( results  => {
+          loop.next();
+          console.log('Done', results);
         });
-        //GET FUN BALANCE
-        const getFunBalancePromise = new Promise(async (getFunBalanceResolve) => {
-          let funBalance = new BigNumber(0);
-          try {
-            const resp = await funToken.balanceOf({
-              owner: address,
-              senderAddress: address,
-            });
 
-            funBalance = resp.balance;
-          } catch (err) {
-            getLogger().error(`BalanceOf ${address}: ${err.message}`);
-            funBalance = '0';
-          }
-          const found = _.find(addressObjs, { address });
-          found.fun = funBalance.toString(10);
-
-          getFunBalanceResolve();
-        });
-
-        //EXCHANGE
-        // Get RUNES balance
-        const getRunesExchangeBalancePromise = new Promise(async (getRunesExchangeBalanceResolve) => {
-          let RunesExchangeBalance = new BigNumber(0);
-          try {
-            const hex = await getInstance().getHexAddress(address);
-            const resp = await exchange.balanceOf({
-              token: '0000000000000000000000000000000000000000',
-              user: hex,
-              senderAddress: address,
-            });
-            runesExchangeBalance = resp.balance;
-          } catch (err) {
-            getLogger().error(`BalanceOf ${address}: ${err.message}`);
-            runesExchangeBalance = '0';
-          }
-
-          // Update Runes balance for address
-          const found = _.find(addressObjs, { address });
-          found.exchangerunes = runesExchangeBalance.toString(10);
-          getRunesExchangeBalanceResolve();
-        });
-
-        // Get PRED balance
-        const getPredExchangeBalancePromise = new Promise(async (getPredExchangeBalanceResolve) => {
-          let predExchangeBalance = new BigNumber(0);
-          try {
-            const hex = await getInstance().getHexAddress(address);
-            const resp = await exchange.balanceOf({
-              token: contractMetadata.Tokens.PredictionToken.address,
-              user: hex,
-              senderAddress: address,
-            });
-
-            predExchangeBalance = resp.balance;
-          } catch (err) {
-            getLogger().error(`BalanceOf ${address}: ${err.message}`);
-            predExchangeBalance = '0';
-          }
-
-          // Update PRED balance for address
-          const found = _.find(addressObjs, { address });
-          found.exchangepred = predExchangeBalance.toString(10);
-
-          getPredExchangeBalanceResolve();
-        });
-
-        //GET FUN BALANCE
-        const getFunExchangeBalancePromise = new Promise(async (getFunExchangeBalanceResolve) => {
-          let funExchangeBalance = new BigNumber(0);
-          try {
-            const hex = await getInstance().getHexAddress(address);
-            const resp = await exchange.balanceOf({
-              token: contractMetadata.Tokens.FunToken.address,
-              user: hex,
-              senderAddress: address,
-            });
-
-            funExchangeBalance = resp.balance;
-          } catch (err) {
-            getLogger().error(`BalanceOf ${address}: ${err.message}`);
-            funExchangeBalance = '0';
-          }
-          const found = _.find(addressObjs, { address });
-          found.exchangefun = funExchangeBalance.toString(10);
-
-          getFunExchangeBalanceResolve();
-        });
-
-        getPredBalancePromises.push(getPredBalancePromise);
-        getFunBalancePromises.push(getFunBalancePromise);
-        getRunesExchangeBalancePromises.push(getRunesExchangeBalancePromise);
-        getPredExchangeBalancePromises.push(getPredExchangeBalancePromise);
-        getFunExchangeBalancePromises.push(getFunExchangeBalancePromise);
       });
-
-      await Promise.all(getPredBalancePromises);
-      await Promise.all(getFunBalancePromises);
-      await Promise.all(getRunesExchangeBalancePromises);
-      await Promise.all(getPredExchangeBalancePromises);
-      await Promise.all(getFunExchangeBalancePromises);
-      loop.next();
     }, () => {
+      console.log('all Done');
       resolve();
+
     });
   });
 
