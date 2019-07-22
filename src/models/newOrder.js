@@ -27,7 +27,7 @@ class NewOrder {
         }
       }
     }
-    if (this.rawLog._sellToken === metadata.Runebase.address) {
+    if (this.rawLog._sellToken === metadata.BaseCurrency.address) {
       this.type = 'BUYORDER';
       this.orderType = 'BUYORDER';
     }

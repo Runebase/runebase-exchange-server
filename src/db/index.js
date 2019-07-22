@@ -58,28 +58,23 @@ async function initDB() {
 
     const metadata = getContractMetadata();
 
-    for (var key in metadata['Tokens']){
-      if (metadata['Tokens'][key]['pair']) {
-        if (key !== 'Runebase') {
-          const addMarket = metadata['Tokens'][key]['pair'];
-          const dataSrc = blockchainDataPath + '/' + addMarket + '.tsv';
-          if (!fs.existsSync(dataSrc)){
-            fs.writeFile(dataSrc, 'date\topen\thigh\tlow\tclose\tvolume\n2018-01-01\t0\t0\t0\t0\t0\n2018-01-02\t0\t0\t0\t0\t0\n', { flag: 'w' }, function(err) {
-              if (err)
-                return console.error(err);
-            });
-          }
-          fs.closeSync(fs.openSync(dataSrc, 'a'));
-          db.Markets.count({ market: addMarket }, function (err, count) {
-            if (count === 0) {
-              const market = new Market(addMarket).translate();
-              db.Markets.insert(market);
-            }
-          });
-        }
+    for (var MarketName in metadata['Tokens']){
+      const addMarket = metadata['Tokens'][MarketName]['pair'];
+      const dataSrc = blockchainDataPath + '/' + addMarket + '.tsv';
+      if (!fs.existsSync(dataSrc)){
+        fs.writeFile(dataSrc, 'date\topen\thigh\tlow\tclose\tvolume\n2018-01-01\t0\t0\t0\t0\t0\n2018-01-02\t0\t0\t0\t0\t0\n', { flag: 'w' }, function(err) {
+          if (err)
+            return console.error(err);
+        });
       }
+      fs.closeSync(fs.openSync(dataSrc, 'a'));
+      db.Markets.count({ market: addMarket }, function (err, count) {
+        if (count === 0) {
+          const market = new Market(addMarket).translate();
+          db.Markets.insert(market);
+        }
+      });
     }
-
   } catch (err) {
     throw Error(`DB load Error: ${err.message}`);
   }

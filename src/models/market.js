@@ -14,9 +14,7 @@ class Market {
     const metadata = getContractMetadata();
     for (var key in metadata['Tokens']){
       if (metadata['Tokens'][key]['pair'] === this.market) {
-        if (key !== 'Runebase') {
-          this.tokenName = metadata['Tokens'][key]['tokenName'];
-        }
+        this.tokenName = metadata['Tokens'][key]['tokenName'];
       }
     }
   }

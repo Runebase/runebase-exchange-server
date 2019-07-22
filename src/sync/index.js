@@ -267,7 +267,7 @@ async function getAddressBalances() {
       _.map(addressBatches[loop.iteration()], async (address) => {
         const ExchangeTokenBalances = async () => {
           await new Promise( async (ExchangeTokenBalancesParentResolver) => {
-            console.log('Start ExchangeTokenBalances');
+            getLogger().debug('Start ExchangeTokenBalances');
             let size = Object.keys(contractMetadata['Tokens']).length;
             let ExchangeTokenCounter = 0;
             for (ExchangeTokenName in contractMetadata['Tokens']) {
@@ -373,18 +373,18 @@ async function getAddressBalances() {
             ExchangeBaseCurrencyBalanceParentResolve();
           })
           .catch(()=> {
-            console.log('ExchangeBaseCurrencyBalances Error');
+            getLogger().error('ExchangeBaseCurrencyBalances Error');
             throw 'ExchangeBaseCurrencyBalances';
           });
         }
 
         const WalletBaseCurrencyBalance = async () => {
           await new Promise( (WalletBaseCurrencyBalanceResolve, reject) => {
-            console.log('ExchangeTokenBalances done');
+            getLogger().debug('ExchangeTokenBalances done');
             WalletBaseCurrencyBalanceResolve();
           })
           .catch(()=> {
-            console.log('WalletBaseCurrencyBalances Error');
+            getLogger().error('WalletBaseCurrencyBalances Error');
             throw 'WalletBaseCurrencyBalances';
           });
         }
@@ -394,7 +394,7 @@ async function getAddressBalances() {
         }
 
         async function FetchBalances(arr) {
-          console.log('FetchBalances: ');
+          getLogger().debug('FetchBalances:');
           return await Promise.all(
             [
               WalletTokenBalances(),
@@ -422,17 +422,21 @@ async function getAddressBalances() {
   // Add default address with zero balances if no address was used before
   if (_.isEmpty(addressObjs)) {
     const address = await wallet.getAccountAddress({ accountName: '' });
-    addressObjs.push({
-      address,
-      runebase: '0',
-      pred: '0',
-      fun: '0',
-      exchangerunes: '0',
-      exchangepred: '0',
-      exchangefun: '0',
-    });
+    const myEmptyObject = {};
+    myEmptyObject['address'] = address;
+    for (EmptyTokenNames in contractMetadata['Tokens']) {
+      lowerCasePair = contractMetadata['Tokens'][EmptyTokenNames]['pair'].toLowerCase();
+      exchangeLowerCasePair = 'exchange' + lowerCasePair;
+      myEmptyObject[lowerCasePair] = '0';
+      myEmptyObject[exchangeLowerCasePair] = '0';
+    }
+    myEmptyObject['runebase'] = '0';
+    myEmptyObject['exchangerunes'] = '0';
+    addressObjs.push(
+      myEmptyObject,
+    );
   }
-
+  console.log(addressObjs);
   return addressObjs;
 }
 
