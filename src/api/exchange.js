@@ -1,22 +1,17 @@
 const _ = require('lodash');
-const { Contract, Rweb3 } = require('rweb3');
+const BigNumber = require('bignumber.js');
+const { getInstance } = require('../rclient');
 
 const { getContractMetadata, getRunebaseRPCAddress } = require('../config');
+const { SATOSHI_CONVERSION } = require('../constants');
 const Utils = require('../utils');
+
 
 function getContract() {
   const metadata = getContractMetadata();
-  return new Contract(getRunebaseRPCAddress(), metadata.Radex.address, metadata.Radex.abi);
+  return getInstance().Contract(metadata.Radex.address, metadata.Radex.abi);
 }
-function getContractToken(tokenChoice) {
-  const metadata = getContractMetadata();
-  const func = new Function("new Contract(getRunebaseRPCAddress()," + metadata + ".Tokens." + tokenChoice + ".address, " + metadata + ".Tokens." + tokenChoice + ".abi);")();
-  return func();
-}
-function getContractpred() {
-  const metadata = getContractMetadata();
-  return new Contract(getRunebaseRPCAddress(), metadata.Tokens.PredictionToken.address, metadata.Tokens.PredictionToken.abi);
-}
+
 const Exchange = {
 
   async balanceOf(args) {
@@ -37,7 +32,7 @@ const Exchange = {
       methodArgs: [token, user],
       senderAddress,
     });
-    res.balance = Utils.hexToDecimalString(res[0]);
+    res.balance = Utils.hexToDecimalString(res.executionResult.formattedOutput[0]);
     res[0] = Utils.hexToDecimalString(res[0]);
     return res;
   },
@@ -74,6 +69,7 @@ const Exchange = {
       tokenaddress,
       senderAddress,
     } = args;
+    const metaData = getContractMetadata();
     if (_.isUndefined(senderAddress)) {
       throw new TypeError('senderAddress needs to be defined');
     }
@@ -83,14 +79,20 @@ const Exchange = {
     if (_.isUndefined(amount)) {
       throw new TypeError('value needs to be defined');
     }
+    if (_.isUndefined(token)) {
+      throw new TypeError('value needs to be defined');
+    }
+    if (_.isUndefined(senderAddress)) {
+      throw new TypeError('value needs to be defined');
+    }
+
     let calculatedAmount;
-    if (token == "RUNES") {
+    if (token == metaData['BaseCurrency']['pair']) {
       calculatedAmount = amount * 1e8;
     }
     else {
-      calculatedAmount = amount;
+      calculatedAmount = parseInt(amount, 10);
     }
-
     const res = await getContract().send('redeem', {
       methodArgs: [tokenaddress, calculatedAmount],
       senderAddress,

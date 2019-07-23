@@ -10,7 +10,6 @@ class Trade {
       this.blockNum = blockNum;
       this.txid = txid;
       this.rawLog = rawLog;
-      console.log('getOrder:' + getOrder);
       this.getOrder = getOrder;
       this.decode();
     }

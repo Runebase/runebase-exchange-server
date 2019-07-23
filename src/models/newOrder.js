@@ -19,7 +19,6 @@ class NewOrder {
   decode() {
     const metadata = getContractMetadata();
     for (var key in metadata['Tokens']){
-      console.log('tokename model orderjs: ' + metadata['Tokens'][key]['pair']);
       if (metadata['Tokens'][key]['address'] === this.rawLog._sellToken || metadata['Tokens'][key]['address'] === this.rawLog._buyToken) {
         if (key !== 'Runebase') {
           this.token = metadata['Tokens'][key]['pair'];

@@ -276,6 +276,7 @@ async function getAddressBalances() {
                 getLogger().debug('TokenName: ' + ExchangeTokenName);
                 getLogger().debug(contractMetadata['Tokens'][ExchangeTokenName]['pair']);
                 getLogger().debug(contractMetadata['Tokens'][ExchangeTokenName]['address']);
+                getLogger().debug('Exchange Token Error');
                 try {
                   const hex = await getInstance().getHexAddress(address);
                   const resp = await exchange.balanceOf({
@@ -318,6 +319,7 @@ async function getAddressBalances() {
                 getLogger().debug(WalletTokenName);
                 getLogger().debug(contractMetadata['Tokens'][WalletTokenName]['pair']);
                 getLogger().debug(contractMetadata['Tokens'][WalletTokenName]['address']);
+                getLogger().debug('Wallet Token Error');
                 try {
                   const resp = await Token.balanceOf({
                     owner: address,
@@ -408,12 +410,11 @@ async function getAddressBalances() {
 
         FetchBalances().then( results  => {
           loop.next();
-          console.log('Done', results);
+          getLogger().log('Done', results);
         });
 
       });
     }, () => {
-      console.log('all Done');
       resolve();
 
     });
@@ -421,6 +422,7 @@ async function getAddressBalances() {
 
   // Add default address with zero balances if no address was used before
   if (_.isEmpty(addressObjs)) {
+    console.log('if empty');
     const address = await wallet.getAccountAddress({ accountName: '' });
     const myEmptyObject = {};
     myEmptyObject['address'] = address;
@@ -436,7 +438,6 @@ async function getAddressBalances() {
       myEmptyObject,
     );
   }
-  console.log(addressObjs);
   return addressObjs;
 }
 
@@ -660,7 +661,7 @@ async function syncTrade(db, startBlock, endBlock, removeHexPrefix) {
             newHigh= trade.price;
           }
           const upData = tradeDate + '\t' + LastClose + '\t' + newHigh + '\t' + newLow + '\t' + trade.price + '\t' + newVolume.toFixed(8);
-          buffer = new Buffer(upData);
+          buffer = Buffer.from(upData);
 
           fs.open(dataSrc, 'a', function(err, fd) {
             if (err) {

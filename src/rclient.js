@@ -1,7 +1,7 @@
 const { Rweb3 } = require('rweb3');
 
 const { getRunebaseRPCAddress } = require('./config');
-const QClient = (() => {
+const RClient = (() => {
   let instance;
 
   function createInstance() {
@@ -18,4 +18,4 @@ const QClient = (() => {
   };
 })();
 
-module.exports = QClient;
+module.exports = RClient;

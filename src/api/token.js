@@ -1,11 +1,12 @@
 const _ = require('lodash');
-const { Contract } = require('rweb3');
 
 const { getRunebaseRPCAddress } = require('../config');
 const Utils = require('../utils');
+const { getInstance } = require('../rclient');
+
 
 function getContract(tokenAddress, abi) {
-  return new Contract(getRunebaseRPCAddress(), tokenAddress, abi);
+  return getInstance().Contract(tokenAddress, abi);
 }
 
 const Token = {
@@ -157,14 +158,12 @@ const Token = {
     if (_.isUndefined(RrcVersion)) {
       throw new TypeError('RrcVersion needs to be defined');
     }
-
     const res = await getContract(tokenAddress, abi).call('balanceOf', {
       methodArgs: [owner],
       senderAddress,
     });
     res[0] = Utils.hexToDecimalString(res[0]);
-    res.balance = Utils.hexToDecimalString(res.balance);
-    console.log(res.balance + ' res.balance');
+    res.balance = Utils.hexToDecimalString(res.executionResult.formattedOutput.balance);
     return res;
   },
 };

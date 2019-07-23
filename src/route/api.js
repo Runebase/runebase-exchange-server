@@ -2,8 +2,7 @@ const { Router } = require('restify-router');
 const restify = require('restify');
 const Blockchain = require('../api/blockchain');
 const Wallet = require('../api/wallet');
-const PredictionToken = require('../api/prediction_token');
-const FunToken = require('../api/fun_token');
+const Token = require('../api/token');
 const Transaction = require('../api/transaction');
 const RunebaseUtils = require('../api/runebase_utils');
 const EmitterHelper = require('../utils/emitterHelper');
@@ -193,7 +192,7 @@ apiRouter.post('/search-logs', (req, res, next) => {
 
 /* PredictionToken */
 apiRouter.post('/approve', (req, res, next) => {
-  PredictionToken.approve(req.params)
+  Token.approve(req.params)
     .then((result) => {
       onRequestSuccess(res, result, next);
     }, (err) => {
@@ -202,7 +201,7 @@ apiRouter.post('/approve', (req, res, next) => {
 });
 
 apiRouter.post('/allowance', (req, res, next) => {
-  PredictionToken.allowance(req.params)
+  Token.allowance(req.params)
     .then((result) => {
       onRequestSuccess(res, result, next);
     }, (err) => {
@@ -210,23 +209,14 @@ apiRouter.post('/allowance', (req, res, next) => {
     });
 });
 
-apiRouter.post('/pred-balance', (req, res, next) => {
-  PredictionToken.balanceOf(req.params)
+apiRouter.post('/token-balance', (req, res, next) => {
+  Token.balanceOf(req.params)
     .then((result) => {
       onRequestSuccess(res, result, next);
     }, (err) => {
       onRequestError(res, err, next);
     });
 });
-apiRouter.post('/fun-balance', (req, res, next) => {
-  FunToken.balanceOf(req.params)
-    .then((result) => {
-      onRequestSuccess(res, result, next);
-    }, (err) => {
-      onRequestError(res, err, next);
-    });
-});
-
 
 /* Transactions */
 apiRouter.post('/transaction-cost', (req, res, next) => {

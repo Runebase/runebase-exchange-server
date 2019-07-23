@@ -13,7 +13,9 @@ class Market {
   decode() {
     const metadata = getContractMetadata();
     for (var key in metadata['Tokens']){
+      console.log(this.market);
       if (metadata['Tokens'][key]['pair'] === this.market) {
+        console.log(this.market);
         this.tokenName = metadata['Tokens'][key]['tokenName'];
       }
     }

@@ -40,7 +40,7 @@ contract Radex is ContractReceiver {
   event MarketMaker(address indexed _owner, address indexed _token, uint256 _amount, uint256 _time);
   event Trade(address indexed _from, address indexed _to, uint256 indexed _orderId, uint256 _soldTokens, uint256 _boughtTokens, uint256 _time);
 
-  function Radex() {
+  constructor() {
     feeMultiplier = 1000;
     admin = msg.sender;
   }
@@ -59,7 +59,7 @@ contract Radex is ContractReceiver {
     balances[msg.sender][sellToken] = balances[msg.sender][sellToken].sub(amount);
     commitments[msg.sender][sellToken] = commitments[msg.sender][sellToken].add(amount);
 
-    NewOrder(orderId, msg.sender, sellToken, buyToken, amount, priceMul, priceDiv, now);
+    emit NewOrder(orderId, msg.sender, sellToken, buyToken, amount, priceMul, priceDiv, now);
   }
 
   function cancelOrder(uint256 orderId) {
@@ -70,7 +70,7 @@ contract Radex is ContractReceiver {
     commitments[msg.sender][order.sellToken] = commitments[msg.sender][order.sellToken].sub(order.amount);
     balances[msg.sender][order.sellToken] = balances[msg.sender][order.sellToken].add(order.amount);
 
-    OrderCancelled(orderId, now);
+    emit OrderCancelled(orderId, now);
   }
 
   function executeOrder(uint256 orderId, uint256 amount) {
@@ -91,10 +91,10 @@ contract Radex is ContractReceiver {
 
     commitments[order.owner][order.sellToken] = commitments[order.owner][order.sellToken].sub(amount);
     order.amount = order.amount.sub(amount);
-    if (order.amount == 0) { OrderFulfilled(orderId, now); }
+    if (order.amount == 0) { emit OrderFulfilled(orderId, now); }
 
-    Trade(msg.sender, order.owner, orderId, amount, buyTokenAmount, now);
-    MarketMaker(order.owner, order.sellToken, fee, now);
+    emit Trade(msg.sender, order.owner, orderId, amount, buyTokenAmount, now);
+    emit MarketMaker(order.owner, order.sellToken, fee, now);
   }
 
 
@@ -110,7 +110,7 @@ contract Radex is ContractReceiver {
     } else {
       ERC223(token).transfer(caller, value);
     }
-    Withdrawal(token, msg.sender, value, now);
+    emit Withdrawal(token, msg.sender, value, now);
   }
 
   function balanceOf(address token, address user) constant returns (uint256) {
@@ -127,13 +127,13 @@ contract Radex is ContractReceiver {
   function tokenFallback(address _from, uint _value, bytes /* _data */) {
     // ERC223 token deposit handler
     balances[_from][msg.sender] = balances[_from][msg.sender].add(_value);
-    Deposit(msg.sender, _from, _value, now);
+    emit Deposit(msg.sender, _from, _value, now);
   }
 
   function fund() payable {
     // ETH deposit handler
     balances[msg.sender][etherAddress] = balances[msg.sender][etherAddress].add(msg.value);
-    Deposit(etherAddress, msg.sender, msg.value, now);
+    emit Deposit(etherAddress, msg.sender, msg.value, now);
   }
 
   // register the ERC20<>ERC223 pair with the smart contract

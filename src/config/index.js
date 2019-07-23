@@ -19,8 +19,6 @@ const Config = {
   TRANSFER_MIN_CONFIRMATIONS: 1,
   DEFAULT_GAS_LIMIT: 250000,
   DEFAULT_GAS_PRICE: 0.0000004,
-  CREATE_CORACLE_GAS_LIMIT: 3500000,
-  CREATE_DORACLE_GAS_LIMIT: 1500000,
   UNLOCK_SECONDS: 604800,
 };
 const rpcPassword = getRandomPassword(); // Generate random password for every session

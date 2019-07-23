@@ -8,8 +8,6 @@ const { getLogger } = require('../utils/logger');
 const blockchain = require('../api/blockchain');
 const network = require('../api/network');
 const wallet = require('../api/wallet');
-const predictionToken = require('../api/prediction_token');
-const funToken = require('../api/fun_token');
 const Token = require('../api/token');
 const { Config, getContractMetadata } = require('../config');
 const { db, DBHelper } = require('../db');
@@ -393,60 +391,42 @@ module.exports = {
       } = data;
 
       const version = Config.CONTRACT_VERSION_NUM;
+      let metaData = getContractMetadata();
 
       let txid;
       let sentTx;
-      switch (token) {
-        case 'RUNES': {
-          // Send sendToAddress tx
-          try {
-            txid = await wallet.sendToAddress({
-              address: receiverAddress,
-              amount,
-              senderAddress,
-              changeToAddress: true,
-            });
-          } catch (err) {
-            getLogger().error(`Error calling Wallet.sendToAddress: ${err.message}`);
-            throw err;
-          }
-          break;
-        }
-        case 'PRED': {
-          // Send transfer tx
-          try {
-            sentTx = await predictionToken.transfer({
-              to: receiverAddress,
-              value: amount,
-              senderAddress,
-            });
-            txid = sentTx.txid;
-          } catch (err) {
-            getLogger().error(`Error calling PredictionToken.transfer: ${err.message}`);
-            throw err;
-          }
-          break;
-        }
-        case 'FUN': {
-          // Send transfer tx
-          try {
-            sentTx = await funToken.transfer({
-              to: receiverAddress,
-              value: amount,
-              senderAddress,
-            });
-            txid = sentTx.txid;
-          } catch (err) {
-            getLogger().error(`Error calling FunToken.transfer: ${err.message}`);
-            throw err;
-          }
-          break;
-        }
-        default: {
-          throw new Error(`Invalid token transfer type: ${token}`);
+      if (token == 'RUNES') {
+        try {
+          txid = await wallet.sendToAddress({
+            address: receiverAddress,
+            amount,
+            senderAddress,
+            changeToAddress: true,
+          });
+        } catch (err) {
+          getLogger().error(`Error calling Wallet.sendToAddress: ${err.message}`);
+          throw err;
         }
       }
-
+      for(key in metaData['Tokens']){
+        if (token == metaData['Tokens'][key]['pair']) {
+          try {
+            sentTx = await Token.transfer({
+              to: receiverAddress,
+              value: amount,
+              senderAddress,
+              token: metaData['Tokens'][key]['pair'],
+              tokenAddress: metaData['Tokens'][key]['address'],
+              abi: metaData['Tokens'][key]['abi'],
+              RrcVersion: metaData['Tokens'][key]['rrc'],
+            });
+            txid = sentTx.txid;
+          } catch (err) {
+            getLogger().error(`Error calling Token.transfer: ${err.message}`);
+            throw err;
+          }
+        }
+      }
       // Insert Transaction
       const gasLimit = sentTx ? sentTx.args.gasLimit : Config.DEFAULT_GAS_LIMIT;
       const gasPrice = sentTx ? sentTx.args.gasPrice : Config.DEFAULT_GAS_PRICE;
@@ -474,8 +454,8 @@ module.exports = {
         token,
         amount,
       } = data;
-      let metadata = getContractMetadata();
-      const exchangeAddress = await getInstance().fromHexAddress(metadata.Radex.address);
+      let metaData = getContractMetadata();
+      const exchangeAddress = await getInstance().fromHexAddress(metaData.Radex.address);
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
       let sentTx;
@@ -492,17 +472,17 @@ module.exports = {
           throw err;
         }
       }
-      for(key in metadata['Tokens']){
-        if (token == metadata['Tokens'][key]['pair']) {
+      for(key in metaData['Tokens']){
+        if (token == metaData['Tokens'][key]['pair']) {
           try {
             sentTx = await Token.transfer({
               to: exchangeAddress,
               value: amount,
               senderAddress,
-              token: metadata['Tokens'][key]['pair'],
-              tokenAddress: metadata['Tokens'][key]['address'],
-              abi: metadata['Tokens'][key]['abi'],
-              RrcVersion: metadata['Tokens'][key]['rrc'],
+              token: metaData['Tokens'][key]['pair'],
+              tokenAddress: metaData['Tokens'][key]['address'],
+              abi: metaData['Tokens'][key]['abi'],
+              RrcVersion: metaData['Tokens'][key]['rrc'],
             });
             txid = sentTx.txid;
           } catch (err) {
@@ -511,7 +491,7 @@ module.exports = {
           }
         }
       }
-      // Insert if lodash loop over metadata['Tokens'] does not contain ['pair'] of var token then throw error?
+      // Insert if lodash loop over metaData['Tokens'] does not contain ['pair'] of var token then throw error?
 
       let xAmount
       if (token == 'RUNES') {
@@ -519,6 +499,7 @@ module.exports = {
       } else {
         xAmount = new BigNumber(amount).dividedBy(SATOSHI_CONVERSION).toString();
       }
+      getLogger().debug('Token Deposit' + token);
       // Insert Transaction
       const gasLimit = sentTx ? sentTx.args.gasLimit : Config.DEFAULT_GAS_LIMIT;
       const gasPrice = sentTx ? sentTx.args.gasPrice : Config.DEFAULT_GAS_PRICE;
@@ -550,72 +531,49 @@ module.exports = {
         token,
         amount,
       } = data;
-      let metadata = getContractMetadata();
-      const exchangeAddress = await getInstance().fromHexAddress(metadata.Radex.address);
+      let metaData = await getContractMetadata();
+      const exchangeAddress = await getInstance().fromHexAddress(metaData.Radex.address);
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
       let sentTx;
       let tokenaddress;
 
-      switch (token) {
-        case 'RUNES': {
-          // Send sendToAddress tx
-          try {
-            tokenaddress = "0000000000000000000000000000000000000000";
-            txid = await exchange.redeemExchange({
-              exchangeAddress,
-              amount,
-              token,
-              tokenaddress,
-              senderAddress,
-            });
-          } catch (err) {
-            getLogger().error(`Error calling redeemExchange: ${err.message}`);
-            throw err;
-          }
-          break;
-        }
-        case 'PRED': {
-          // Send transfer tx
-          try {
-            tokenaddress = metadata.Tokens.PredictionToken.address;
-            txid = await exchange.redeemExchange({
-              exchangeAddress,
-              amount,
-              token,
-              tokenaddress,
-              senderAddress,
-            });
-          } catch (err) {
-            getLogger().error(`Error calling redeemExchange: ${err.message}`);
-            throw err;
-          }
-          break;
-        }
-        case 'FUN': {
-          // Send transfer tx
-          try {
-            tokenaddress = metadata.Tokens.FunToken.address;
-            txid = await exchange.redeemExchange({
-              exchangeAddress,
-              amount,
-              token,
-              tokenaddress,
-              senderAddress,
-            });
-          } catch (err) {
-            getLogger().error(`Error calling redeemExchange: ${err.message}`);
-            throw err;
-          }
-          break;
-        }
-        default: {
-          throw new Error(`Invalid token transfer type: ${token}`);
+      if (token == metaData['BaseCurrency']['pair']) {
+        try {
+          //tokenaddress = "0000000000000000000000000000000000000000";
+          txid = await exchange.redeemExchange({
+            exchangeAddress,
+            amount,
+            token,
+            tokenaddress: metaData['BaseCurrency']['address'],
+            senderAddress,
+          });
+        } catch (err) {
+          getLogger().error(`Error calling redeemExchange: ${err.message}`);
+          throw err;
         }
       }
+      for(redeemExchangeToken in metaData['Tokens']){
+        if (token == metaData['Tokens'][redeemExchangeToken]['pair']) {
+          try {
+            //tokenaddress = metaData.Tokens.PredictionToken.address;
+            txid = await exchange.redeemExchange({
+              exchangeAddress,
+              amount,
+              token,
+              tokenaddress: metaData['Tokens'][redeemExchangeToken]['address'],
+              senderAddress,
+            });
+          } catch (err) {
+            getLogger().error(`Error calling redeemExchange: ${err.message}`);
+            throw err;
+          }
+        }
+      }
+
       let xAmount
-      if (token == 'RUNES') {
-        xAmount = amount
+      if (token == metaData['BaseCurrency']['pair']) {
+        xAmount = amount;
       } else {
         xAmount = new BigNumber(amount).dividedBy(SATOSHI_CONVERSION).toString();
       }
@@ -640,6 +598,7 @@ module.exports = {
         tokenName: token,
         amount: xAmount,
       };
+      getlogger.debug(JSON.stringify(withdrawal));
       await DBHelper.insertTopic(db.FundRedeem, withdrawal);
       return withdrawal;
     },
@@ -652,8 +611,8 @@ module.exports = {
         price,
         orderType,
       } = data;
-      let metadata = getContractMetadata();
-      const exchangeAddress = await getInstance().fromHexAddress(metadata.Radex.address);
+      let metaData = getContractMetadata();
+      const exchangeAddress = await getInstance().fromHexAddress(metaData.Radex.address);
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
       let sentTx;
@@ -665,9 +624,9 @@ module.exports = {
         case 'PRED': {
           // Send transfer tx
           try {
-            tokenaddress = metadata.Tokens.PredictionToken.address;
+            tokenaddress = metaData.Tokens.PredictionToken.address;
           } catch (err) {
-            getLogger().error(`Error calling metadata.Tokens.PredictionToken.address: ${err.message}`);
+            getLogger().error(`Error calling metaData.Tokens.PredictionToken.address: ${err.message}`);
             throw err;
           }
           break;
@@ -675,9 +634,9 @@ module.exports = {
         case 'FUN': {
           // Send transfer tx
           try {
-            tokenaddress = metadata.Tokens.FunToken.address;
+            tokenaddress = metaData.Tokens.FunToken.address;
           } catch (err) {
-            getLogger().error(`Error calling metadata.Tokens.FunToken.address: ${err.message}`);
+            getLogger().error(`Error calling metaData.Tokens.FunToken.address: ${err.message}`);
             throw err;
           }
           break;
@@ -748,8 +707,8 @@ module.exports = {
         orderId,
       } = data;
       let sentTx;
-      let metadata = getContractMetadata();
-      const exchangeAddress = await getInstance().fromHexAddress(metadata.Radex.address);
+      let metaData = getContractMetadata();
+      const exchangeAddress = await getInstance().fromHexAddress(metaData.Radex.address);
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
       try {
@@ -790,8 +749,8 @@ module.exports = {
         exchangeAmount,
       } = data;
       let sentTx;
-      let metadata = getContractMetadata();
-      const exchangeAddress = await getInstance().fromHexAddress(metadata.Radex.address);
+      let metaData = getContractMetadata();
+      const exchangeAddress = await getInstance().fromHexAddress(metaData.Radex.address);
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
       try {

@@ -167,8 +167,8 @@ async function checkWalletEncryption() {
 // Ensure runebased is running before starting sync/API
 async function checkRunebasedInit() {
   try {
-    // getInfo throws an error if trying to be called before runebased is running
-    await getInstance().getInfo();
+    // getBlockchainInfo throws an error if trying to be called before runebased is running
+    await getInstance().getBlockchainInfo();
 
     // no error was caught, runebased is initialized
     clearInterval(checkInterval);
@@ -184,7 +184,7 @@ async function checkRunebasedInit() {
 
 function startRunebaseProcess(reindex) {
   try {
-    const flags = ['-logevents', '-rpcworkqueue=32', `-rpcuser=${Config.RPC_USER}`, `-rpcpassword=${getRPCPassword()}`];
+    const flags = ['-logevents', '-rpcworkqueue=32', '-daemon', `-rpcuser=${Config.RPC_USER}`, `-rpcpassword=${getRPCPassword()}`];
     if (!isMainnet()) {
       flags.push('-testnet');
     }
