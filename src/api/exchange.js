@@ -6,29 +6,26 @@ const { getContractMetadata, getRunebaseRPCAddress } = require('../config');
 const { SATOSHI_CONVERSION } = require('../constants');
 const Utils = require('../utils');
 
-
-function getContract() {
-  const metadata = getContractMetadata();
-  return getInstance().Contract(metadata.Radex.address, metadata.Radex.abi);
+function getContract(MetaData) {
+  return getInstance().Contract(MetaData['Radex']['Address'], MetaData['Radex']['Abi']);
 }
 
 const Exchange = {
 
   async balanceOf(args) {
+    const MetaData = await getContractMetadata();
     const {
       token, // address
       user, // address
       senderAddress,
     } = args;
-
     if (_.isUndefined(user)) {
       throw new TypeError('user needs to be defined');
     }
     if (_.isUndefined(token)) {
       throw new TypeError('token needs to be defined');
     }
-
-    const res = await getContract().call('balanceOf', {
+    const res = await getContract(MetaData).call('balanceOf', {
       methodArgs: [token, user],
       senderAddress,
     });
@@ -38,6 +35,7 @@ const Exchange = {
   },
 
   async fundExchangeRunes(args) {
+    const MetaData = await getContractMetadata();
     const {
       exchangeAddress, // address
       amount,
@@ -53,7 +51,7 @@ const Exchange = {
       throw new TypeError('value needs to be defined');
     }
 
-    const res = await getContract().send('fund', {
+    const res = await getContract(MetaData).send('fund', {
       methodArgs: [],
       amount,
       senderAddress,
@@ -62,6 +60,7 @@ const Exchange = {
   },
 
   async redeemExchange(args) {
+    const MetaData = await getContractMetadata();
     const {
       exchangeAddress, // address
       amount,
@@ -69,7 +68,6 @@ const Exchange = {
       tokenaddress,
       senderAddress,
     } = args;
-    const metaData = getContractMetadata();
     if (_.isUndefined(senderAddress)) {
       throw new TypeError('senderAddress needs to be defined');
     }
@@ -86,21 +84,15 @@ const Exchange = {
       throw new TypeError('value needs to be defined');
     }
 
-    let calculatedAmount;
-    if (token == metaData['BaseCurrency']['pair']) {
-      calculatedAmount = amount * 1e8;
-    }
-    else {
-      calculatedAmount = parseInt(amount, 10);
-    }
-    const res = await getContract().send('redeem', {
-      methodArgs: [tokenaddress, calculatedAmount],
+    const res = await getContract(MetaData).send('redeem', {
+      methodArgs: [tokenaddress, amount],
       senderAddress,
     });
     return res.txid;
   },
 
   async orderExchange(args) {
+    const MetaData = await getContractMetadata();
     const {
       exchangeAddress, // address
       amount,
@@ -132,13 +124,13 @@ const Exchange = {
 
     let res;
     if (orderType == 'buy') {
-      res = await getContract().send('createOrder', {
+      res = await getContract(MetaData).send('createOrder', {
         methodArgs: ["0000000000000000000000000000000000000000", tokenaddress, amount, priceFractN, priceFractD],
         senderAddress,
       });
     }
     if (orderType == 'sell') {
-      res = await getContract().send('createOrder', {
+      res = await getContract(MetaData).send('createOrder', {
         methodArgs: [tokenaddress, "0000000000000000000000000000000000000000", amount, priceFractN, priceFractD],
         senderAddress,
       });
@@ -146,6 +138,7 @@ const Exchange = {
     return res.txid;
   },
   async cancelOrderExchange(args) {
+    const MetaData = await getContractMetadata();
     const {
       exchangeAddress, // address
       senderAddress,
@@ -161,7 +154,7 @@ const Exchange = {
       throw new TypeError('orderId needs to be defined');
     }
 
-    res = await getContract().send('cancelOrder', {
+    res = await getContract(MetaData).send('cancelOrder', {
       methodArgs: [orderId],
       senderAddress,
     });
@@ -170,6 +163,7 @@ const Exchange = {
   },
 
   async executeOrderExchange(args) {
+    const MetaData = await getContractMetadata();
     const {
       exchangeAddress, // address
       senderAddress,
@@ -188,7 +182,7 @@ const Exchange = {
     if (_.isUndefined(exchangeAmount)) {
       throw new TypeError('exchangeAmount needs to be defined');
     }
-    res = await getContract().send('executeOrder', {
+    res = await getContract(MetaData).send('executeOrder', {
       methodArgs: [orderId, exchangeAmount],
       senderAddress,
     });

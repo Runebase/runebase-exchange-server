@@ -24,7 +24,7 @@ if (_.includes(process.argv, '--testnet')) {
 } else {
   console.log('testnet/mainnet flag not found. startServer() will need to be called explicitly.');
 }
-
+const MetaData = 'ok12341323';
 module.exports = {
   RunebaseExchangeServer,
   RunebaseExchangeConfig,
@@ -39,4 +39,5 @@ module.exports = {
   Transaction,
   Wallet,
   Exchange,
+  MetaData,
 };

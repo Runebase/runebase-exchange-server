@@ -60,7 +60,9 @@ export PATH=$PATH:/home/bago/.cargo/bin
 ##Compile & Deploy Contracts
 
 ###Testnet
+
 ####Start Runebased
+
 ```
 
 #wait for -logevents resync if needed.
@@ -74,7 +76,9 @@ export PATH=$PATH:/home/bago/.cargo/bin
 
 
 ```
+
 ####Compile & deploy
+
 ```
 
 solar deploy radex/Radex.sol --qtum_rpc=http://user:pass@localhost:19432 --qtum_sender=5aeewynHSJoeaa86GPmWKeXorRvQfs2skv --optimize --env="testnet.exchange" --force
@@ -83,6 +87,7 @@ solar deploy radex/Radex.sol --qtum_rpc=http://user:pass@localhost:19432 --qtum_
 ```
 
 ####Stop Runebased
+
 ```
 
 ../../runebase/linux64/bin/runebase-cli -testnet -rpcuser=user -rpcpassword=pass stop
@@ -91,9 +96,10 @@ solar deploy radex/Radex.sol --qtum_rpc=http://user:pass@localhost:19432 --qtum_
 ```
 
 ####Edit Config MetaData
+
 ```
 
-nano runebase-exchange-server/src/config/testnet/contract_metadata.js
+nano ../config/testnet/contract_metadata.js
 
 
 ```
@@ -102,6 +108,7 @@ nano runebase-exchange-server/src/config/testnet/contract_metadata.js
 
 
 ##Register Tokens
+
 ```
 
 
@@ -111,6 +118,7 @@ nano runebase-exchange-server/src/config/testnet/contract_metadata.js
 ##Testnet Desployed Contract
 
 ###Radex
+
 ```
 ContractHexAddress:
 efe8319e263d81773c9aa104be1cf81ac3a932dd
@@ -127,6 +135,7 @@ OwnerHexAddres:
 ```
 
 ###PRED Token
+
 ```
 ContractHexAddress:
 9611e83c9c85a8ef8dd4aeb9963e7e7128916ee5
@@ -142,6 +151,7 @@ OwnerHexAddres:
 
 ```
 ###FUN token
+
 ```
 ContractHexAddress:
 3ff6c7cd7d46393e1cfd15406013ab041bddecf3
@@ -160,6 +170,7 @@ OwnerHexAddres:
 ##Mainnet Desployed Contract
 
 ###Radex
+
 ```
 Hex Address:
 
@@ -170,6 +181,7 @@ Owner:
 ```
 
 ###PRED Token
+
 ```
 Hex Address:
 
@@ -180,6 +192,7 @@ Owner:
 ```
 
 ###FUN token
+
 ```
 Hex Address:
 

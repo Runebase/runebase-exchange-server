@@ -5,7 +5,7 @@ const { getLogger } = require('../utils/logger');
 const blockchain = require('../api/blockchain');
 const wallet = require('../api/wallet');
 const { DBHelper } = require('../db');
-const { Config, getContractMetadata } = require('../config');
+const { Config } = require('../config');
 const { txState, orderState } = require('../constants');
 const Utils = require('../utils');
 

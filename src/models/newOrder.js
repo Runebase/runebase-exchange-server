@@ -19,14 +19,12 @@ class NewOrder {
   decode() {
     const metadata = getContractMetadata();
     for (var key in metadata['Tokens']){
-      if (metadata['Tokens'][key]['address'] === this.rawLog._sellToken || metadata['Tokens'][key]['address'] === this.rawLog._buyToken) {
-        if (key !== 'Runebase') {
-          this.token = metadata['Tokens'][key]['pair'];
-          this.tokenName = metadata['Tokens'][key]['pair'];
-        }
+      if (metadata['Tokens'][key]['Address'] === this.rawLog._sellToken || metadata['Tokens'][key]['Address'] === this.rawLog._buyToken) {
+        this.token = metadata['Tokens'][key]['Pair'];
+        this.tokenName = metadata['Tokens'][key]['Pair'];
       }
     }
-    if (this.rawLog._sellToken === metadata.BaseCurrency.address) {
+    if (this.rawLog._sellToken === metadata['BaseCurrency']['Address']) {
       this.type = 'BUYORDER';
       this.orderType = 'BUYORDER';
     }

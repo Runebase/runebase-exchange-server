@@ -389,13 +389,13 @@ module.exports = {
         token,
         amount,
       } = data;
-
+      const MetaData = getContractMetadata();
       const version = Config.CONTRACT_VERSION_NUM;
-      let metaData = getContractMetadata();
+
 
       let txid;
       let sentTx;
-      if (token == 'RUNES') {
+      if (token == MetaData['BaseCurrency']['Pair']) {
         try {
           txid = await wallet.sendToAddress({
             address: receiverAddress,
@@ -408,17 +408,17 @@ module.exports = {
           throw err;
         }
       }
-      for(key in metaData['Tokens']){
-        if (token == metaData['Tokens'][key]['pair']) {
+      for(key in MetaData['Tokens']){
+        if (token == MetaData['Tokens'][key]['Pair']) {
           try {
             sentTx = await Token.transfer({
               to: receiverAddress,
               value: amount,
               senderAddress,
-              token: metaData['Tokens'][key]['pair'],
-              tokenAddress: metaData['Tokens'][key]['address'],
-              abi: metaData['Tokens'][key]['abi'],
-              RrcVersion: metaData['Tokens'][key]['rrc'],
+              token: MetaData['Tokens'][key]['Pair'],
+              tokenAddress: MetaData['Tokens'][key]['Address'],
+              abi: MetaData['Tokens'][key]['Abi'],
+              RrcVersion: MetaData['Tokens'][key]['Rrc'],
             });
             txid = sentTx.txid;
           } catch (err) {
@@ -447,20 +447,20 @@ module.exports = {
 
       return tx;
     },
-    transferExchange: async (root, data, { db: { Transactions, FundRedeem } }) => {
+    transferExchange: async (root, data, { db: { FundRedeem } }) => {
       const {
         senderAddress,
         receiverAddress,
         token,
         amount,
       } = data;
-      let metaData = getContractMetadata();
-      const exchangeAddress = await getInstance().fromHexAddress(metaData.Radex.address);
+      let MetaData = getContractMetadata();
+      const exchangeAddress = await getInstance().fromHexAddress(MetaData.Radex.Address);
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
       let sentTx;
 
-      if (token == "RUNES") {
+      if (token == MetaData['BaseCurrency']['Pair']) {
         try {
           txid = await exchange.fundExchangeRunes({
             exchangeAddress,
@@ -472,17 +472,17 @@ module.exports = {
           throw err;
         }
       }
-      for(key in metaData['Tokens']){
-        if (token == metaData['Tokens'][key]['pair']) {
+      for(key in MetaData['Tokens']){
+        if (token == MetaData['Tokens'][key]['Pair']) {
           try {
             sentTx = await Token.transfer({
               to: exchangeAddress,
               value: amount,
               senderAddress,
-              token: metaData['Tokens'][key]['pair'],
-              tokenAddress: metaData['Tokens'][key]['address'],
-              abi: metaData['Tokens'][key]['abi'],
-              RrcVersion: metaData['Tokens'][key]['rrc'],
+              token: MetaData['Tokens'][key]['Pair'],
+              tokenAddress: MetaData['Tokens'][key]['Address'],
+              abi: MetaData['Tokens'][key]['Abi'],
+              RrcVersion: MetaData['Tokens'][key]['Rrc'],
             });
             txid = sentTx.txid;
           } catch (err) {
@@ -491,15 +491,9 @@ module.exports = {
           }
         }
       }
-      // Insert if lodash loop over metaData['Tokens'] does not contain ['pair'] of var token then throw error?
 
-      let xAmount
-      if (token == 'RUNES') {
-        xAmount = amount
-      } else {
-        xAmount = new BigNumber(amount).dividedBy(SATOSHI_CONVERSION).toString();
-      }
       getLogger().debug('Token Deposit' + token);
+      getLogger().debug('New Big Number Deposit: ' + new BigNumber(amount).dividedBy(SATOSHI_CONVERSION).toString());
       // Insert Transaction
       const gasLimit = sentTx ? sentTx.args.gasLimit : Config.DEFAULT_GAS_LIMIT;
       const gasPrice = sentTx ? sentTx.args.gasPrice : Config.DEFAULT_GAS_PRICE;
@@ -518,34 +512,34 @@ module.exports = {
         receiverAddress,
         token,
         tokenName: token,
-        amount: xAmount,
+        amount: new BigNumber(amount).dividedBy(SATOSHI_CONVERSION).toString(),
       };
 
       await DBHelper.insertTopic(db.FundRedeem, deposit);
       return deposit;
     },
-    redeemExchange: async (root, data, { db: { Transactions, FundRedeem } }) => {
+    redeemExchange: async (root, data, { db: { FundRedeem } }) => {
       const {
         senderAddress,
         receiverAddress,
         token,
         amount,
       } = data;
-      let metaData = await getContractMetadata();
-      const exchangeAddress = await getInstance().fromHexAddress(metaData.Radex.address);
+      let MetaData = await getContractMetadata();
+      const exchangeAddress = await getInstance().fromHexAddress(MetaData.Radex.Address);
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
       let sentTx;
       let tokenaddress;
 
-      if (token == metaData['BaseCurrency']['pair']) {
+      if (token == MetaData['BaseCurrency']['Pair']) {
         try {
           //tokenaddress = "0000000000000000000000000000000000000000";
           txid = await exchange.redeemExchange({
             exchangeAddress,
             amount,
             token,
-            tokenaddress: metaData['BaseCurrency']['address'],
+            tokenaddress: MetaData['BaseCurrency']['Address'],
             senderAddress,
           });
         } catch (err) {
@@ -553,15 +547,15 @@ module.exports = {
           throw err;
         }
       }
-      for(redeemExchangeToken in metaData['Tokens']){
-        if (token == metaData['Tokens'][redeemExchangeToken]['pair']) {
+      for(redeemExchangeToken in MetaData['Tokens']){
+        if (token == MetaData['Tokens'][redeemExchangeToken]['Pair']) {
           try {
             //tokenaddress = metaData.Tokens.PredictionToken.address;
             txid = await exchange.redeemExchange({
               exchangeAddress,
               amount,
               token,
-              tokenaddress: metaData['Tokens'][redeemExchangeToken]['address'],
+              tokenaddress: MetaData['Tokens'][redeemExchangeToken]['Address'],
               senderAddress,
             });
           } catch (err) {
@@ -571,12 +565,6 @@ module.exports = {
         }
       }
 
-      let xAmount
-      if (token == metaData['BaseCurrency']['pair']) {
-        xAmount = amount;
-      } else {
-        xAmount = new BigNumber(amount).dividedBy(SATOSHI_CONVERSION).toString();
-      }
       // Insert Transaction
       const gasLimit = sentTx ? sentTx.args.gasLimit : Config.DEFAULT_GAS_LIMIT;
       const gasPrice = sentTx ? sentTx.args.gasPrice : Config.DEFAULT_GAS_PRICE;
@@ -596,9 +584,9 @@ module.exports = {
         receiverAddress,
         token,
         tokenName: token,
-        amount: xAmount,
+        amount: new BigNumber(amount).dividedBy(SATOSHI_CONVERSION).toString(),
       };
-      getlogger.debug(JSON.stringify(withdrawal));
+      getLogger().debug(JSON.stringify(withdrawal));
       await DBHelper.insertTopic(db.FundRedeem, withdrawal);
       return withdrawal;
     },
@@ -611,8 +599,8 @@ module.exports = {
         price,
         orderType,
       } = data;
-      let metaData = getContractMetadata();
-      const exchangeAddress = await getInstance().fromHexAddress(metaData.Radex.address);
+      const MetaData = getContractMetadata();
+      const exchangeAddress = await getInstance().fromHexAddress(MetaData.Radex.Address);
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
       let sentTx;
@@ -620,31 +608,17 @@ module.exports = {
       const priceFract = math.fraction(price);
       const priceFractN = priceFract.n;
       const priceFractD = priceFract.d;
-      switch (token) {
-        case 'PRED': {
-          // Send transfer tx
+      for (TokenName in MetaData['Tokens']) {
+        if (token == MetaData['Tokens'][TokenName]['Pair']) {
           try {
-            tokenaddress = metaData.Tokens.PredictionToken.address;
+            tokenaddress = MetaData['Tokens'][TokenName]['Address'];
           } catch (err) {
-            getLogger().error(`Error calling metaData.Tokens.PredictionToken.address: ${err.message}`);
+            getLogger().error(`Error calling MetaData['Tokens'][${TokenName}]['Address']: ${err.message}`);
             throw err;
           }
-          break;
-        }
-        case 'FUN': {
-          // Send transfer tx
-          try {
-            tokenaddress = metaData.Tokens.FunToken.address;
-          } catch (err) {
-            getLogger().error(`Error calling metaData.Tokens.FunToken.address: ${err.message}`);
-            throw err;
-          }
-          break;
-        }
-        default: {
-          throw new Error(`Invalid token transfer type: ${token}`);
         }
       }
+
       try {
         txid = await exchange.orderExchange({
           exchangeAddress,
@@ -663,13 +637,13 @@ module.exports = {
       let typeOrder;
       if (orderType == 'buy') {
         typeOrder = 'BUYORDER';
-        sellToken = '0000000000000000000000000000000000000000';
+        sellToken = MetaData['BaseCurrency']['Address'];
         buyToken = tokenaddress;
       }
       if (orderType == 'sell') {
         typeOrder = 'SELLORDER'
         sellToken = tokenaddress;
-        buyToken = '0000000000000000000000000000000000000000';
+        buyToken = MetaData['BaseCurrency']['Address'];
       }
       // Insert Transaction
       const gasLimit = sentTx ? sentTx.args.gasLimit : Config.DEFAULT_GAS_LIMIT;
@@ -707,8 +681,8 @@ module.exports = {
         orderId,
       } = data;
       let sentTx;
-      let metaData = getContractMetadata();
-      const exchangeAddress = await getInstance().fromHexAddress(metaData.Radex.address);
+      const MetaData = getContractMetadata();
+      const exchangeAddress = await getInstance().fromHexAddress(MetaData.Radex.Address);
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
       try {
@@ -749,8 +723,8 @@ module.exports = {
         exchangeAmount,
       } = data;
       let sentTx;
-      let metaData = getContractMetadata();
-      const exchangeAddress = await getInstance().fromHexAddress(metaData.Radex.address);
+      const MetaData = getContractMetadata();
+      const exchangeAddress = await getInstance().fromHexAddress(MetaData.Radex.Address);
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
       try {

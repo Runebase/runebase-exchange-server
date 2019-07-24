@@ -89,7 +89,7 @@ function getRunebaseExplorerUrl() {
 * @param testnet {Boolean} Whether on testnet env or not.
 * @return {Object} The contract metadata.
 */
-function getContractMetadata(versionNum = Config.CONTRACT_VERSION_NUM) {
+async function getContractMetadata(versionNum = Config.CONTRACT_VERSION_NUM) {
   if (!_.isNumber(versionNum)) {
     throw new Error('Must supply a version number');
   }

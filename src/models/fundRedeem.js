@@ -21,12 +21,12 @@ class NewOrder {
     this.time = this.rawLog._time.toString(10);
     this.date = new Date(this.rawLog._time.toString(10)*1000);
     const metadata = getContractMetadata();
-    if (this.rawLog._token === metadata['BaseCurrency']['address']) {
-      this.tokenName = metadata['BaseCurrency']['pair'];
+    if (this.rawLog._token === metadata['BaseCurrency']['Address']) {
+      this.tokenName = metadata['BaseCurrency']['Pair'];
     }
     for (var key in metadata['Tokens']){
-      if (metadata['Tokens'][key]['address'] === this.rawLog._token) {
-        this.tokenName = metadata['Tokens'][key]["pair"];
+      if (metadata['Tokens'][key]['Address'] === this.rawLog._token) {
+        this.tokenName = metadata['Tokens'][key]["Pair"];
       }
     }
     this.token = this.rawLog._token;

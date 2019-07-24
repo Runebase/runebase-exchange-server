@@ -33,7 +33,7 @@ const BLOCK_BATCH_SIZE = 200;
 const SYNC_THRESHOLD_SECS = 1200;
 
 // hardcode sender address as it doesnt matter
-let contractMetadata;
+let MetaData;
 let senderAddress;
 
 function sequentialLoop(iterations, process, exit) {
@@ -74,22 +74,20 @@ function sequentialLoop(iterations, process, exit) {
   return loop;
 }
 
-const startSync = () => {
-  contractMetadata = getContractMetadata();
+const startSync = async () => {
+  MetaData = await getContractMetadata();
   senderAddress = isMainnet() ? 'RKBLGRvYqunBtpueEPuXzQQmoVsQQTvd3a' : '5VMGo2gGHhkW5TvRRtcKM1RkyUgrnNP7dn';
-
   sync(db);
 };
 
 async function sync(db) {
   const removeHexPrefix = true;
-
   const currentBlockCount = Math.max(0, await getInstance().getBlockCount());
   const currentBlockHash = await getInstance().getBlockHash(currentBlockCount);
   const currentBlockTime = (await getInstance().getBlock(currentBlockHash)).time;
 
   // Start sync based on last block written to DB
-  let startBlock = contractMetadata.contractDeployedBlock;
+  let startBlock = MetaData.contractDeployedBlock;
   const blocks = await db.Blocks.cfind({}).sort({ blockNum: -1 }).limit(1).exec();
   if (blocks.length > 0) {
     startBlock = Math.max(blocks[0].blockNum + 1, startBlock);
@@ -267,20 +265,16 @@ async function getAddressBalances() {
       _.map(addressBatches[loop.iteration()], async (address) => {
         const ExchangeTokenBalances = async () => {
           await new Promise( async (ExchangeTokenBalancesParentResolver) => {
-            getLogger().debug('Start ExchangeTokenBalances');
-            let size = Object.keys(contractMetadata['Tokens']).length;
+            let size = Object.keys(MetaData['Tokens']).length;
             let ExchangeTokenCounter = 0;
-            for (ExchangeTokenName in contractMetadata['Tokens']) {
+            for (ExchangeTokenName in MetaData['Tokens']) {
               await new Promise(async function(ExchangeTokenBalanceResolver, reject) {
                 let ExchangeTokenBalance = new BigNumber(0);
-                getLogger().debug('TokenName: ' + ExchangeTokenName);
-                getLogger().debug(contractMetadata['Tokens'][ExchangeTokenName]['pair']);
-                getLogger().debug(contractMetadata['Tokens'][ExchangeTokenName]['address']);
-                getLogger().debug('Exchange Token Error');
                 try {
+                  const test = MetaData['Tokens'][ExchangeTokenName]['Address'];
                   const hex = await getInstance().getHexAddress(address);
                   const resp = await exchange.balanceOf({
-                    token: contractMetadata['Tokens'][ExchangeTokenName]['address'],
+                    token: test,
                     user: hex,
                     senderAddress: address,
                   });
@@ -290,11 +284,11 @@ async function getAddressBalances() {
                   ExchangeTokenBalance = '0';
                 }
                 const found = await _.find(addressObjs, { address });
-                const lowerPair = await contractMetadata['Tokens'][ExchangeTokenName]['pair'].toLowerCase();
+                const lowerPair = await MetaData['Tokens'][ExchangeTokenName]['Pair'].toLowerCase();
                 const exchangePair = 'exchange' + lowerPair;
                 found[exchangePair] = ExchangeTokenBalance.toString(10);
                 ExchangeTokenCounter++;
-                if (ExchangeTokenCounter == Object.keys(contractMetadata['Tokens']).length) {
+                if (ExchangeTokenCounter == Object.keys(MetaData['Tokens']).length) {
                   getLogger().debug('Exchange Token Parent Done');
                   ExchangeTokenBalancesParentResolver();
                 }
@@ -311,23 +305,19 @@ async function getAddressBalances() {
         const WalletTokenBalances = async () => {
           await new Promise( async (WalletTokenBalancesParentResolver) => {
             getLogger().debug('Start WalletTokenBalances');
-            let size = Object.keys(contractMetadata['Tokens']).length;
+            let size = Object.keys(MetaData['Tokens']).length;
             let ExchangeTokenCounter = 0;
-            for (WalletTokenName in contractMetadata['Tokens']) {
+            for (WalletTokenName in MetaData['Tokens']) {
               await new Promise(async function(WalletTokenBalanceResolver, reject) {
                 let Balance = new BigNumber(0);
-                getLogger().debug(WalletTokenName);
-                getLogger().debug(contractMetadata['Tokens'][WalletTokenName]['pair']);
-                getLogger().debug(contractMetadata['Tokens'][WalletTokenName]['address']);
-                getLogger().debug('Wallet Token Error');
                 try {
                   const resp = await Token.balanceOf({
                     owner: address,
                     senderAddress: address,
-                    token: contractMetadata['Tokens'][WalletTokenName]['pair'],
-                    tokenAddress: contractMetadata['Tokens'][WalletTokenName]['address'],
-                    abi: contractMetadata['Tokens'][WalletTokenName]['abi'],
-                    RrcVersion: contractMetadata['Tokens'][WalletTokenName]['rrc'],
+                    token: MetaData['Tokens'][WalletTokenName]['Pair'],
+                    tokenAddress: MetaData['Tokens'][WalletTokenName]['Address'],
+                    abi: MetaData['Tokens'][WalletTokenName]['Abi'],
+                    RrcVersion: MetaData['Tokens'][WalletTokenName]['Rrc'],
                   });
                   Balance = resp.balance;
                 } catch (err) {
@@ -336,10 +326,10 @@ async function getAddressBalances() {
 
                 }
                 const found = await _.find(addressObjs, { address });
-                const lowerPair = await contractMetadata['Tokens'][WalletTokenName]['pair'].toLowerCase();
+                const lowerPair = await MetaData['Tokens'][WalletTokenName]['Pair'].toLowerCase();
                 found[lowerPair] = Balance.toString(10);
                 ExchangeTokenCounter++;
-                if (ExchangeTokenCounter == Object.keys(contractMetadata['Tokens']).length) {
+                if (ExchangeTokenCounter == Object.keys(MetaData['Tokens']).length) {
                   getLogger().debug('Wallet Token Parent Done');
                   WalletTokenBalancesParentResolver();
                 }
@@ -359,7 +349,7 @@ async function getAddressBalances() {
             try {
               const hex = await getInstance().getHexAddress(address);
               const resp = await exchange.balanceOf({
-                token: contractMetadata['BaseCurrency']['address'],
+                token: MetaData['BaseCurrency']['Address'],
                 user: hex,
                 senderAddress: address,
               });
@@ -422,12 +412,11 @@ async function getAddressBalances() {
 
   // Add default address with zero balances if no address was used before
   if (_.isEmpty(addressObjs)) {
-    console.log('if empty');
     const address = await wallet.getAccountAddress({ accountName: '' });
     const myEmptyObject = {};
     myEmptyObject['address'] = address;
-    for (EmptyTokenNames in contractMetadata['Tokens']) {
-      lowerCasePair = contractMetadata['Tokens'][EmptyTokenNames]['pair'].toLowerCase();
+    for (EmptyTokenNames in MetaData['Tokens']) {
+      lowerCasePair = MetaData['Tokens'][EmptyTokenNames]['Pair'].toLowerCase();
       exchangeLowerCasePair = 'exchange' + lowerCasePair;
       myEmptyObject[lowerCasePair] = '0';
       myEmptyObject[exchangeLowerCasePair] = '0';
@@ -446,8 +435,8 @@ async function syncNewOrder(db, startBlock, endBlock, removeHexPrefix) {
   let result;
   try {
     result = await getInstance().searchLogs(
-      startBlock, endBlock, contractMetadata.Radex.address,
-      [contractMetadata.Radex.NewOrder], contractMetadata, removeHexPrefix,
+      startBlock, endBlock, MetaData.Radex.Address,
+      [MetaData.Radex.NewOrder], MetaData, removeHexPrefix,
     );
     getLogger().debug('searchlog New Order');
   } catch (err) {
@@ -488,8 +477,8 @@ async function syncOrderCancelled(db, startBlock, endBlock, removeHexPrefix) {
   let result;
   try {
     result = await getInstance().searchLogs(
-      startBlock, endBlock, contractMetadata.Radex.address,
-      [contractMetadata.Radex.OrderCancelled], contractMetadata, removeHexPrefix,
+      startBlock, endBlock, MetaData.Radex.Address,
+      [MetaData.Radex.OrderCancelled], MetaData, removeHexPrefix,
     );
     getLogger().debug('searchlog OrderCancelled');
   } catch (err) {
@@ -528,8 +517,8 @@ async function syncOrderFulfilled(db, startBlock, endBlock, removeHexPrefix) {
   let result;
   try {
     result = await getInstance().searchLogs(
-      startBlock, endBlock, contractMetadata.Radex.address,
-      [contractMetadata.Radex.OrderFulfilled], contractMetadata, removeHexPrefix,
+      startBlock, endBlock, MetaData.Radex.Address,
+      [MetaData.Radex.OrderFulfilled], MetaData, removeHexPrefix,
     );
     getLogger().debug('searchlog OrderFulfilled');
   } catch (err) {
@@ -611,8 +600,8 @@ async function syncTrade(db, startBlock, endBlock, removeHexPrefix) {
   const blockchainDataPath = Utility.getDataDir();
   try {
     result = await getInstance().searchLogs(
-      startBlock, endBlock, contractMetadata.Radex.address,
-      [contractMetadata.Radex.Trade], contractMetadata, removeHexPrefix,
+      startBlock, endBlock, MetaData.Radex.Address,
+      [MetaData.Radex.Trade], MetaData, removeHexPrefix,
     );
     getLogger().debug('searchlog syncTrade');
   } catch (err) {
@@ -728,27 +717,24 @@ async function syncMarkets(db, startBlock, endBlock, removeHexPrefix) {
   const createMarketPromises = [];
   const marketDB = new Promise(async (resolve) => {
     try {
-      const metadata = getContractMetadata();
       let change = 0;
       let volume = 0;
       let filled = 0;
       let minSellPrice = 0;
-      for (var key in metadata['Tokens']){
-        if (metadata['Tokens'][key]['pair']) {
-          if (key !== 'Runebase') {
+      for (var key in MetaData['Tokens']){
             change = 0;
             volume = 0;
             filled = 0;
             minSellPrice = 0;
             const unixTime = Date.now();
             var inputDate = unixTime - 84600000; // 24 hours
-            const pair = metadata['Tokens'][key]['pair'];
+            const pair = MetaData['Tokens'][key]['Pair'];
             const trades = await DBHelper.find(
                     db.Trade,
                       {
                         $and: [
                         { 'date': { $gt: new Date(inputDate) } },
-                        { tokenName: metadata['Tokens'][key]['pair'] },
+                        { tokenName: MetaData['Tokens'][key]['Pair'] },
                         ]
                       },
                     ['time', 'tokenName', 'date', 'price', 'amount', 'orderType', 'boughtTokens', 'soldTokens'],
@@ -775,7 +761,7 @@ async function syncMarkets(db, startBlock, endBlock, removeHexPrefix) {
                     db.NewOrder,
                       {
                         $and: [
-                        { tokenName: metadata['Tokens'][key]['pair'] },
+                        { tokenName: MetaData['Tokens'][key]['Pair'] },
                         { status: orderState.ACTIVE },
                         { orderType: 'SELLORDER' },
                         ]
@@ -784,18 +770,18 @@ async function syncMarkets(db, startBlock, endBlock, removeHexPrefix) {
                   );
             if (orders !== undefined) {
               minSellPrice = Math.min.apply(Math, orders.map(function(order) { return order.price; }));
-
+            }
+            if (minSellPrice === Infinity) {
+              minSellPrice = 0;
             }
             const obj = {
-              market: metadata['Tokens'][key]['pair'],
+              market: MetaData['Tokens'][key]['Pair'],
               change: change.toFixed(2),
               volume,
-              tokenName: metadata['Tokens'][key]['tokenName'],
+              tokenName: MetaData['Tokens'][key]['TokenName'],
               price: minSellPrice,
             }
             await DBHelper.updateMarketsByQuery(db.Markets, { market: obj.market }, obj);
-          }
-        }
       };
       //await DBHelper.updateMarketsByQuery(db.Markets, { market: obj.market }, obj);
       //await DBHelper.updateOrderByQuery(db.NewOrder, { orderId }, updateOrder);
@@ -816,8 +802,8 @@ async function syncFundRedeem(db, startBlock, endBlock, removeHexPrefix) {
   let resultRedeem;
   try {
     resultFund = await getInstance().searchLogs(
-      startBlock, endBlock, contractMetadata.Radex.address,
-      [contractMetadata.Radex.Deposit], contractMetadata, removeHexPrefix,
+      startBlock, endBlock, MetaData.Radex.Address,
+      [MetaData.Radex.Deposit], MetaData, removeHexPrefix,
     );
     getLogger().debug('searchlog syncFund');
   } catch (err) {
@@ -826,8 +812,8 @@ async function syncFundRedeem(db, startBlock, endBlock, removeHexPrefix) {
   }
   try {
     resultRedeem = await getInstance().searchLogs(
-      startBlock, endBlock, contractMetadata.Radex.address,
-      [contractMetadata.Radex.Withdrawal], contractMetadata, removeHexPrefix,
+      startBlock, endBlock, MetaData.Radex.Address,
+      [MetaData.Radex.Withdrawal], MetaData, removeHexPrefix,
     );
     getLogger().debug('searchlog syncRedeem');
   } catch (err) {
@@ -896,8 +882,8 @@ async function syncMarketMaker(db, startBlock, endBlock, removeHexPrefix) {
   let result;
   try {
     result = await getInstance().searchLogs(
-      startBlock, endBlock, contractMetadata.Radex.address,
-      [contractMetadata.Radex.Trade], contractMetadata, removeHexPrefix,
+      startBlock, endBlock, MetaData.Radex.Address,
+      [MetaData.Radex.Trade], MetaData, removeHexPrefix,
     );
     getLogger().debug('searchlog syncMarketMaker');
   } catch (err) {
