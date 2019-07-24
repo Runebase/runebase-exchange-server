@@ -58,7 +58,7 @@ async function initDB() {
 
     const MetaData = await getContractMetadata();
 
-    for (var MarketName in MetaData['Tokens']){
+    for (MarketName in MetaData['Tokens']){
       const addMarket = MetaData['Tokens'][MarketName]['Pair'];
       const dataSrc = blockchainDataPath + '/' + addMarket + '.tsv';
       if (!fs.existsSync(dataSrc)){
@@ -70,8 +70,8 @@ async function initDB() {
       fs.closeSync(fs.openSync(dataSrc, 'a'));
       db.Markets.count({ market: addMarket }, function (err, count) {
         if (count === 0) {
-          console.log('insert');
-          const market = new Market(addMarket).translate();
+          const market = new Market(addMarket, MetaData['Tokens'][MarketName]).translate();
+          console.log(market);
           db.Markets.insert(market);
         }
       });

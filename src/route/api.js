@@ -8,7 +8,9 @@ const RunebaseUtils = require('../api/runebase_utils');
 const EmitterHelper = require('../utils/emitterHelper');
 const { getInstance } = require('../rclient');
 const { getContractMetadata } = require('../config');
+
 const apiRouter = new Router();
+
 
 
 function onRequestSuccess(res, result, next) {
@@ -20,13 +22,26 @@ function onRequestError(res, err, next) {
   res.send(500, { error: err.message });
   next();
 }
+
+/*Exchange*/
+
+
+
 /*MetaData*/
-apiRouter.get('/api/metadata/:option1?', (req, res, next) => {
+apiRouter.get('/metadata', (req, res, next) => {
   getContractMetadata()
     .then((result) => {
-      console.log(result[req.params.option1]);
+      onRequestSuccess(res, result, next);
+    }, (err) => {
+      onRequestError(res, err, next);
+    });
+});
+
+apiRouter.get('/metadata/:option1?', (req, res, next) => {
+  getContractMetadata()
+    .then((result) => {
       if (result[req.params.option1] === undefined) {
-        res.send(500, "MetaData Not Found");
+        onRequestSuccess(res, result, next);
       }
       if (result[req.params.option1] !== undefined) {
         onRequestSuccess(res, result[req.params.option1], next);
@@ -35,35 +50,28 @@ apiRouter.get('/api/metadata/:option1?', (req, res, next) => {
       onRequestError(res, err, next);
     });
 });
-apiRouter.get('/api/metadata/:option1/:option2?', (req, res, next) => {
-  getContractMetadata()
-    .then((result) => {
-       if (result[req.params.option2] === undefined) {
-        res.send(500, "MetaData Not Found");
-      }
-      if (result[req.params.option1] !== undefined) {
-        onRequestSuccess(res, result[req.params.option1][req.params.option2], next);
-      }
-    }, (err) => {
-      onRequestError(res, err, next);
-    });
-});
-apiRouter.get('/api/metadata/:option1/:option2/:option3?', (req, res, next) => {
-  getContractMetadata()
-    .then((result) => {
-      if (result[req.params.option2] === undefined) {
-        res.send(500, "MetaData Not Found");
-      }
-      if (result[req.params.option1] !== undefined) {
-        onRequestSuccess(res, result[req.params.option1][req.params.option2][req.params.option3], next);
-      }
-    }, (err) => {
-      onRequestError(res, err, next);
-    });
-});
 
-apiRouter.get('/api/getcurrencyinformation', (req, res, next) => {
-  return res.send('/api/getcurrencyinformation');
+apiRouter.get('/metadata/:option1/:option2?', (req, res, next) => {
+  getContractMetadata()
+    .then((result) => {
+      if (result[req.params.option1][req.params.option2] === undefined) {
+        res.send(500, "MetaData Not Found");
+      }
+      onRequestSuccess(res, result[req.params.option1][req.params.option2], next);
+    }, (err) => {
+      onRequestError(res, err, next);
+    });
+});
+apiRouter.get('/metadata/:option1/:option2/:option3?', (req, res, next) => {
+  getContractMetadata()
+    .then((result) => {
+      if (result[req.params.option1][req.params.option2][req.params.option3] === undefined) {
+        res.send(500, "MetaData Not Found");
+      }
+      onRequestSuccess(res, result[req.params.option1][req.params.option2][req.params.option3], next);
+    }, (err) => {
+      onRequestError(res, err, next);
+    });
 });
 
 /* Misc */

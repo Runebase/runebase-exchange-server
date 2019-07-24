@@ -21,7 +21,6 @@ const { startSync } = require('./sync');
 const { getInstance } = require('./rclient');
 const Wallet = require('./api/wallet');
 const Utils = require('./utils');
-
 const walletEncryptedMessage = 'Your wallet is encrypted. Please use a non-encrypted wallet for the server.';
 
 let runebaseProcess;
@@ -261,6 +260,7 @@ async function startAPI() {
     default: 'index.html'
   }))
   routerInstance.applyRoutes(server);
+
 
   server.listen(Config.PORT, () => {
     SubscriptionServer.create(

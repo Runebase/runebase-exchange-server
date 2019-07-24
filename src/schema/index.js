@@ -34,6 +34,8 @@ type Market {
   price: String!
   change: String!
   volume: String!
+  address: String!
+  abi: String!
   orderCount: String!
 }
 
@@ -104,7 +106,6 @@ type syncInfo {
   addressBalances: [AddressBalance]
 }
 
-# type: FundRedeem
 type fundRedeemInfo {
   txid: String!
   type: String!
@@ -118,7 +119,6 @@ type fundRedeemInfo {
   blockNum: Int
 }
 
-# type: NewOrder
 type myOrderInfo {
   txid: String!
   txCanceled: String!
@@ -143,7 +143,7 @@ type myOrderInfo {
   blockNum: Int
 }
 
-# type: NewOrder
+
 type activeOrderInfo {
   txid: String!
   txCanceled: String!
@@ -168,7 +168,7 @@ type activeOrderInfo {
   blockNum: Int
 }
 
-# type: NewOrder
+
 type fulfilledOrderInfo {
   txid: String!
   txCanceled: String!
@@ -193,7 +193,7 @@ type fulfilledOrderInfo {
   blockNum: Int
 }
 
-# type: NewOrder
+
 type canceledOrderInfo {
   txid: String!
   txCanceled: String!
@@ -218,7 +218,6 @@ type canceledOrderInfo {
   blockNum: Int
 }
 
-# type: NewOrder
 type buyOrderInfo {
   txid: String!
   txCanceled: String!
@@ -243,7 +242,6 @@ type buyOrderInfo {
   blockNum: Int
 }
 
-# type: NewOrder
 type sellOrderInfo {
   txid: String!
   txCanceled: String!
@@ -268,7 +266,6 @@ type sellOrderInfo {
   blockNum: Int
 }
 
-# type: NewOrder
 type selectedOrderInfo {
   txid: String!
   txCanceled: String!
@@ -293,7 +290,6 @@ type selectedOrderInfo {
   blockNum: Int
 }
 
-# type: Trade
 type myTradeInfo {
   status: _TradeStatusType!
   txid: String!
@@ -312,7 +308,6 @@ type myTradeInfo {
   blockNum: Int
 }
 
-# type: Trade
 type buyHistoryInfo {
   status: _TradeStatusType!
   txid: String!
@@ -331,7 +326,6 @@ type buyHistoryInfo {
   blockNum: Int
 }
 
-# type: Trade
 type sellHistoryInfo {
   status: _TradeStatusType!
   txid: String!
@@ -350,13 +344,14 @@ type sellHistoryInfo {
   blockNum: Int
 }
 
-# type: Market
 type marketInfo {
   market: String!
   tokenName: String!
   price: String!
   change: String!
   volume: String!
+  address: String!
+  abi: String!
   orderCount: String!
 }
 

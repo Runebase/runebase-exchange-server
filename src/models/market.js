@@ -2,30 +2,27 @@
 
 const _ = require('lodash');
 const { Decoder, Utils } = require('rweb3');
-const { isMainnet, getContractMetadata } = require('../config');
 
 class Market {
-  constructor(market) {
+  constructor(market, tokenData) {
     this.market = market;
+    this.tokenData = tokenData;
     this.decode();
   }
 
   decode() {
-    const metadata = getContractMetadata();
-    for (var key in metadata['Tokens']){
-      if (metadata['Tokens'][key]['Pair'] === this.market) {
-        this.tokenName = metadata['Tokens'][key]['TokenName'];
-      }
-    }
+    console.log('tokenData ' + this.tokenData);
   }
 
   translate() {
     return {
       market: this.market,
-      tokenName: this.tokenName,
+      tokenName: this.tokenData['TokenName'],
       price: '',
       change: '',
       volume: '',
+      address: this.tokenData['Address'],
+      abi: JSON.stringify(this.tokenData['Abi']),
     };
   }
 }

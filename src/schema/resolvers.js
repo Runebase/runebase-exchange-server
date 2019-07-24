@@ -143,9 +143,9 @@ function buildNewOrderFilters({
   return filters;
 }
 function buildMarketFilters({
-  OR = [], market, tokenName, price, change, volume
+  OR = [], market, tokenName, price, change, volume, address, abi
 }) {
-  const filter = (market || tokenName || price || change || volume) ? {} : null;
+  const filter = (market || tokenName || price || change || volume || address || abi) ? {} : null;
 
   if (market) {
     filter.market = market;
@@ -165,6 +165,14 @@ function buildMarketFilters({
 
   if (volume) {
     filter.volume = volume;
+  }
+
+  if (address) {
+    filter.address = address;
+  }
+
+  if (abi) {
+    filter.abi = abi;
   }
 
   let filters = filter ? [filter] : [];
@@ -454,8 +462,8 @@ module.exports = {
         token,
         amount,
       } = data;
-      let MetaData = getContractMetadata();
-      const exchangeAddress = await getInstance().fromHexAddress(MetaData.Radex.Address);
+      const MetaData = await getContractMetadata();
+      const exchangeAddress = await getInstance().fromHexAddress(MetaData['Exchange']['Address']);
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
       let sentTx;
@@ -526,7 +534,7 @@ module.exports = {
         amount,
       } = data;
       let MetaData = await getContractMetadata();
-      const exchangeAddress = await getInstance().fromHexAddress(MetaData.Radex.Address);
+      const exchangeAddress = await getInstance().fromHexAddress(MetaData['Exchange']['Address']);
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
       let sentTx;
@@ -600,7 +608,7 @@ module.exports = {
         orderType,
       } = data;
       const MetaData = getContractMetadata();
-      const exchangeAddress = await getInstance().fromHexAddress(MetaData.Radex.Address);
+      const exchangeAddress = await getInstance().fromHexAddress(MetaData['Exchange']['Address']);
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
       let sentTx;
@@ -682,7 +690,7 @@ module.exports = {
       } = data;
       let sentTx;
       const MetaData = getContractMetadata();
-      const exchangeAddress = await getInstance().fromHexAddress(MetaData.Radex.Address);
+      const exchangeAddress = await getInstance().fromHexAddress(MetaData['Exchange']['Address']);
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
       try {
@@ -724,7 +732,7 @@ module.exports = {
       } = data;
       let sentTx;
       const MetaData = getContractMetadata();
-      const exchangeAddress = await getInstance().fromHexAddress(MetaData.Radex.Address);
+      const exchangeAddress = await getInstance().fromHexAddress(MetaData['Exchange']['Address']);
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
       try {

@@ -16,7 +16,7 @@ module.exports = {
 
   txState: {
     PENDING: 'PENDING',
-    SUCCESS: 'SUCCESS',
+    SUCCESS: 'CONFIRMED',
     FAIL: 'FAIL',
   },
 

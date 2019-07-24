@@ -7,7 +7,7 @@ const { SATOSHI_CONVERSION } = require('../constants');
 const Utils = require('../utils');
 
 function getContract(MetaData) {
-  return getInstance().Contract(MetaData['Radex']['Address'], MetaData['Radex']['Abi']);
+  return getInstance().Contract(MetaData['Exchange']['Address'], MetaData['Exchange']['Abi']);
 }
 
 const Exchange = {

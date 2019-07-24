@@ -271,10 +271,9 @@ async function getAddressBalances() {
               await new Promise(async function(ExchangeTokenBalanceResolver, reject) {
                 let ExchangeTokenBalance = new BigNumber(0);
                 try {
-                  const test = MetaData['Tokens'][ExchangeTokenName]['Address'];
                   const hex = await getInstance().getHexAddress(address);
                   const resp = await exchange.balanceOf({
-                    token: test,
+                    token: MetaData['Tokens'][ExchangeTokenName]['Address'],
                     user: hex,
                     senderAddress: address,
                   });
@@ -435,8 +434,8 @@ async function syncNewOrder(db, startBlock, endBlock, removeHexPrefix) {
   let result;
   try {
     result = await getInstance().searchLogs(
-      startBlock, endBlock, MetaData.Radex.Address,
-      [MetaData.Radex.NewOrder], MetaData, removeHexPrefix,
+      startBlock, endBlock, MetaData['Exchange']['Address'],
+      [MetaData['Exchange']['NewOrder']], MetaData, removeHexPrefix,
     );
     getLogger().debug('searchlog New Order');
   } catch (err) {
@@ -477,8 +476,8 @@ async function syncOrderCancelled(db, startBlock, endBlock, removeHexPrefix) {
   let result;
   try {
     result = await getInstance().searchLogs(
-      startBlock, endBlock, MetaData.Radex.Address,
-      [MetaData.Radex.OrderCancelled], MetaData, removeHexPrefix,
+      startBlock, endBlock, MetaData['Exchange']['Address'],
+      [MetaData['Exchange']['OrderCancelled']], MetaData, removeHexPrefix,
     );
     getLogger().debug('searchlog OrderCancelled');
   } catch (err) {
@@ -517,8 +516,8 @@ async function syncOrderFulfilled(db, startBlock, endBlock, removeHexPrefix) {
   let result;
   try {
     result = await getInstance().searchLogs(
-      startBlock, endBlock, MetaData.Radex.Address,
-      [MetaData.Radex.OrderFulfilled], MetaData, removeHexPrefix,
+      startBlock, endBlock, MetaData['Exchange']['Address'],
+      [MetaData['Exchange']['OrderFulfilled']], MetaData, removeHexPrefix,
     );
     getLogger().debug('searchlog OrderFulfilled');
   } catch (err) {
@@ -600,8 +599,8 @@ async function syncTrade(db, startBlock, endBlock, removeHexPrefix) {
   const blockchainDataPath = Utility.getDataDir();
   try {
     result = await getInstance().searchLogs(
-      startBlock, endBlock, MetaData.Radex.Address,
-      [MetaData.Radex.Trade], MetaData, removeHexPrefix,
+      startBlock, endBlock, MetaData['Exchange']['Address'],
+      [MetaData['Exchange']['Trade']], MetaData, removeHexPrefix,
     );
     getLogger().debug('searchlog syncTrade');
   } catch (err) {
@@ -728,7 +727,6 @@ async function syncMarkets(db, startBlock, endBlock, removeHexPrefix) {
             minSellPrice = 0;
             const unixTime = Date.now();
             var inputDate = unixTime - 84600000; // 24 hours
-            const pair = MetaData['Tokens'][key]['Pair'];
             const trades = await DBHelper.find(
                     db.Trade,
                       {
@@ -780,6 +778,8 @@ async function syncMarkets(db, startBlock, endBlock, removeHexPrefix) {
               volume,
               tokenName: MetaData['Tokens'][key]['TokenName'],
               price: minSellPrice,
+              address: MetaData['Tokens'][key]['Address'],
+              abi: MetaData['Tokens'][key]['Abi'],
             }
             await DBHelper.updateMarketsByQuery(db.Markets, { market: obj.market }, obj);
       };
@@ -802,8 +802,8 @@ async function syncFundRedeem(db, startBlock, endBlock, removeHexPrefix) {
   let resultRedeem;
   try {
     resultFund = await getInstance().searchLogs(
-      startBlock, endBlock, MetaData.Radex.Address,
-      [MetaData.Radex.Deposit], MetaData, removeHexPrefix,
+      startBlock, endBlock, MetaData['Exchange']['Address'],
+      [MetaData['Exchange']['Deposit']], MetaData, removeHexPrefix,
     );
     getLogger().debug('searchlog syncFund');
   } catch (err) {
@@ -812,8 +812,8 @@ async function syncFundRedeem(db, startBlock, endBlock, removeHexPrefix) {
   }
   try {
     resultRedeem = await getInstance().searchLogs(
-      startBlock, endBlock, MetaData.Radex.Address,
-      [MetaData.Radex.Withdrawal], MetaData, removeHexPrefix,
+      startBlock, endBlock, MetaData['Exchange']['Address'],
+      [MetaData['Exchange']['Withdrawal']], MetaData, removeHexPrefix,
     );
     getLogger().debug('searchlog syncRedeem');
   } catch (err) {
@@ -882,8 +882,8 @@ async function syncMarketMaker(db, startBlock, endBlock, removeHexPrefix) {
   let result;
   try {
     result = await getInstance().searchLogs(
-      startBlock, endBlock, MetaData.Radex.Address,
-      [MetaData.Radex.Trade], MetaData, removeHexPrefix,
+      startBlock, endBlock, MetaData['Exchange']['Address'],
+      [MetaData['Exchange']['Trade']], MetaData, removeHexPrefix,
     );
     getLogger().debug('searchlog syncMarketMaker');
   } catch (err) {
