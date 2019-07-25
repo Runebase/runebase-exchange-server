@@ -39,6 +39,17 @@ type Market {
   orderCount: String!
 }
 
+type BaseCurrency {
+  pair: String!
+  name: String!
+  address: String!
+}
+
+type MarketImage {
+  market: String!
+  image: String
+}
+
 type FundRedeem {
   txid: String!
   type: String!
@@ -358,9 +369,11 @@ type marketInfo {
 type Query {
   allFundRedeems(filter: FundRedeemFilter, orderBy: [Order!], limit: Int, skip: Int): [FundRedeem]!
   allMarkets(filter: MarketFilter, orderBy: [Order!], limit: Int, skip: Int): [Market]!
+  allMarketImages(filter: MarketImageFilter, orderBy: [Order!], limit: Int, skip: Int): [MarketImage]!
   allTrades(filter: TradeFilter, orderBy: [Order!], limit: Int, skip: Int): [Trade]!
   allNewOrders(filter: NewOrderFilter, orderBy: [Order!], limit: Int, skip: Int): [NewOrder]!
   allTransactions(filter: TransactionFilter, orderBy: [Order!], limit: Int, skip: Int): [Transaction]!
+  getBaseCurrency(filter: BaseCurrencyFilter, orderBy: [Order!], limit: Int, skip: Int): [BaseCurrency]!
   syncInfo(includeBalance: Boolean): syncInfo!
   fundRedeemInfo: fundRedeemInfo!
   myOrderInfo: myOrderInfo!
@@ -374,6 +387,13 @@ type Query {
   buyOrderInfo: buyOrderInfo!
   selectedOrderInfo: selectedOrderInfo!
   marketInfo: marketInfo!
+}
+
+input BaseCurrencyFilter {
+  OR: [BaseCurrencyFilter!]
+  pair: String
+  name: String
+  address: String
 }
 
 input FundRedeemFilter {
@@ -435,6 +455,12 @@ input MarketFilter {
   price: String
   change: String
   volume: String
+}
+
+input MarketImageFilter {
+  OR: [MarketImageFilter!]
+  market: String
+  image: String
 }
 
 input TransactionFilter {
@@ -502,7 +528,6 @@ type Subscription {
   onSellOrderInfo : sellOrderInfo
   onSelectedOrderInfo : selectedOrderInfo
   onBuyOrderInfo : buyOrderInfo
-  onMarketInfo : marketInfo
 }
 
 input Order {

@@ -23,6 +23,7 @@ class Market {
       volume: '',
       address: this.tokenData['Address'],
       abi: JSON.stringify(this.tokenData['Abi']),
+      image: this.tokenData['Image'],
     };
   }
 }

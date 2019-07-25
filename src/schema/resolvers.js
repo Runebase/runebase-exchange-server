@@ -305,8 +305,74 @@ function buildFundRedeemFilters({
   return filters;
 }
 
+function buildMarketImageFilters({
+  OR = [], market, tokenName, image
+}) {
+  const filter = (market || tokenName || image) ? {} : null;
+
+  if (market) {
+    filter.market = market;
+  }
+
+  if (tokenName) {
+    filter.tokenName = tokenName;
+  }
+
+  if (image) {
+    filter.image = image;
+  }
+
+  let filters = filter ? [filter] : [];
+  for (let i = 0; i < OR.length; i++) {
+    filters = filters.concat(buildMarketFilters(OR[i]));
+  }
+  return filters;
+}
+
+function buildBaseCurrencyFilters({
+  OR = [], pair, name, address
+}) {
+  const filter = (pair || name || address) ? {} : null;
+
+  if (pair) {
+    filter.pair = pair;
+  }
+
+  if (name) {
+    filter.name = name;
+  }
+
+  if (address) {
+    filter.address = address;
+  }
+
+  let filters = filter ? [filter] : [];
+  for (let i = 0; i < OR.length; i++) {
+    filters = filters.concat(buildMarketFilters(OR[i]));
+  }
+  return filters;
+}
+
 module.exports = {
   Query: {
+    getBaseCurrency: async (root, {
+      filter, orderBy, limit, skip,
+    }, { db: { BaseCurrency } }) => {
+      const query = filter ? { $or: buildBaseCurrencyFilters(filter) } : {};
+      let cursor = BaseCurrency.cfind(query);
+      cursor = buildCursorOptions(cursor, orderBy, limit, skip);
+      return cursor.exec();
+    },
+
+    allMarketImages: async (root, {
+      filter, orderBy, limit, skip,
+    }, { db: { Markets } }) => {
+      const query = filter ? { $or: buildMarketImageFilters(filter) } : {};
+      let cursor = Markets.cfind(query);
+      cursor = buildCursorOptions(cursor, orderBy, limit, skip);
+      return cursor.exec();
+    },
+
     allNewOrders: async (root, {
       filter, orderBy, limit, skip,
     }, { db: { NewOrder } }) => {

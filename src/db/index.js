@@ -6,6 +6,7 @@ const Utils = require('../utils');
 const { getLogger } = require('../utils/logger');
 const migrateTxDB = require('./migrations/migrateTx');
 const Market = require('../models/market');
+const BaseCurrency = require('../models/baseCurrency');
 const { getContractMetadata } = require('../config');
 
 const db = {
@@ -17,6 +18,7 @@ const db = {
   OrderFulfilled: undefined,
   Markets: undefined,
   FundRedeem: undefined,
+  BaseCurrency: undefined,
 };
 
 
@@ -42,6 +44,7 @@ async function initDB() {
   db.OrderFulfilled = datastore({ filename: `${blockchainDataPath}/orderfulfilled.db` });
   db.Markets = datastore({ filename: `${blockchainDataPath}/markets.db` });
   db.FundRedeem = datastore({ filename: `${blockchainDataPath}/fundRedeem.db` });
+  db.BaseCurrency = datastore({ filename: `${blockchainDataPath}/baseCurrency.db` });
 
   try {
     await Promise.all([
@@ -53,12 +56,56 @@ async function initDB() {
       db.OrderFulfilled.loadDatabase(),
       db.Markets.loadDatabase(),
       db.FundRedeem.loadDatabase(),
+      db.BaseCurrency.loadDatabase(),
     ]);
 
 
     const MetaData = await getContractMetadata();
 
+    const ImportBaseCurrency = () => new Promise((resolve, reject) => {
+      db.BaseCurrency.count({}, function (err, count) {
+        console.log('BaseCurrecyCount: ' + count);
+        if (count === 0) {
+          const baseCurrency = new BaseCurrency(MetaData['BaseCurrency']).translate();
+          console.log(baseCurrency);
+          console.log(count);
+          db.BaseCurrency.insert(baseCurrency).then((value)=>{
+              resolve();
+          });
+        } else {
+          resolve();
+        }
+      })
+    })
+
+    await ImportBaseCurrency();
+
+
+    const ImportMarket = (Key) => new Promise((resolve, reject) => {
+      db.Markets.count({ market: MetaData['Tokens'][Key]['Pair'] }, function (err, count) {
+        if (count === 0) {
+          const market = new Market(MetaData['Tokens'][Key]['Pair'], MetaData['Tokens'][Key]).translate();
+          console.log(market);
+          console.log(count);
+          db.Markets.insert(market).then((value)=>{
+              resolve();
+          });
+        } else {
+          resolve();
+        }
+      })
+    });
+
+    (async() => {
+      for (let key in MetaData['Tokens']) {
+        await ImportMarket(key);
+      }
+    })();
+
+
     for (MarketName in MetaData['Tokens']){
+      console.log('token: ' + MarketName);
+      console.log('token: ' + Object.keys(MetaData['Tokens']).length);
       const addMarket = MetaData['Tokens'][MarketName]['Pair'];
       const dataSrc = blockchainDataPath + '/' + addMarket + '.tsv';
       if (!fs.existsSync(dataSrc)){
@@ -68,13 +115,6 @@ async function initDB() {
         });
       }
       fs.closeSync(fs.openSync(dataSrc, 'a'));
-      db.Markets.count({ market: addMarket }, function (err, count) {
-        if (count === 0) {
-          const market = new Market(addMarket, MetaData['Tokens'][MarketName]).translate();
-          console.log(market);
-          db.Markets.insert(market);
-        }
-      });
     }
   } catch (err) {
     throw Error(`DB load Error: ${err.message}`);
