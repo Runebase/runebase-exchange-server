@@ -43,7 +43,7 @@ function startRunebaseWallet() {
   // Construct flags
   const flags = ['-logevents'];
   if (!isMainnet()) {
-    flags.push('-testnet');
+    flags.push('-testnet -logevents');
   }
 
   const qtProcess = spawn(runebaseqtPath, flags, {
@@ -166,10 +166,8 @@ async function checkWalletEncryption() {
 // Ensure runebased is running before starting sync/API
 async function checkRunebasedInit() {
   try {
-    // getBlockchainInfo throws an error if trying to be called before runebased is running
     await getInstance().getBlockchainInfo();
 
-    // no error was caught, runebased is initialized
     clearInterval(checkInterval);
     checkWalletEncryption();
   } catch (err) {
@@ -290,9 +288,12 @@ async function checkApiInit() {
 }
 
 function startServices() {
-  startSync();
-  startAPI();
-
+  try {
+    startSync();
+    startAPI();
+  } catch (err) {
+    getLogger().debug(err.message);
+  }
   checkApiInterval = setInterval(checkApiInit, 500);
 }
 

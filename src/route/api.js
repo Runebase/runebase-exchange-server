@@ -95,8 +95,8 @@ apiRouter.post('/validate-address', (req, res, next) => {
 });
 
 /* Wallet */
-apiRouter.post('/get-account-address', (req, res, next) => {
-  Wallet.getAccountAddress(req.params)
+apiRouter.post('/get-label-address', (req, res, next) => {
+  Wallet.getAddressesByLabel(req.params)
     .then((result) => {
       onRequestSuccess(res, result, next);
     }, (err) => {

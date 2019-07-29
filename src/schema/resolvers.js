@@ -183,9 +183,9 @@ function buildMarketFilters({
 }
 
 function buildTradeFilters({
-  OR = [], txid, type, status, date, from, to, soldTokens, boughtTokens, tokenName, orderType, price, orderId, time, amount, blockNum
+  OR = [], txid, type, status, date, from, to, soldTokens, boughtTokens, tokenName, token, orderType, price, orderId, time, amount, blockNum
 }) {
-  const filter = (txid || type || status || date || from || to || soldTokens || boughtTokens || tokenName || orderType || price || orderId  || time || amount || blockNum) ? {} : null;
+  const filter = (txid || type || status || date || from || to || soldTokens || boughtTokens || tokenName || token || orderType || price || orderId  || time || amount || blockNum) ? {} : null;
 
   if (txid) {
     filter.txid = txid;
@@ -221,6 +221,10 @@ function buildTradeFilters({
 
   if (tokenName) {
     filter.tokenName = tokenName;
+  }
+
+  if (token) {
+    filter.token = token;
   }
 
   if (orderType) {
@@ -444,6 +448,7 @@ module.exports = {
         addressBalances = await getAddressBalances();
       }
       const peerNodeCount = await network.getPeerNodeCount();
+      addressBalances.balance = JSON.stringify(addressBalances.balance);
 
       return {
         syncBlockNum,
@@ -465,10 +470,9 @@ module.exports = {
       } = data;
       const MetaData = getContractMetadata();
       const version = Config.CONTRACT_VERSION_NUM;
-
-
       let txid;
       let sentTx;
+
       if (token == MetaData['BaseCurrency']['Pair']) {
         try {
           txid = await wallet.sendToAddress({
@@ -537,9 +541,10 @@ module.exports = {
       if (token == MetaData['BaseCurrency']['Pair']) {
         try {
           txid = await exchange.fundExchangeRunes({
-            exchangeAddress,
+            exchangeAddress: MetaData['Exchange']['Address'],
             amount,
             senderAddress,
+            abi: MetaData['Exchange']['Abi'],
           });
         } catch (err) {
           getLogger().error(`Error calling exchange.fund: ${err.message}`);
@@ -610,11 +615,12 @@ module.exports = {
         try {
           //tokenaddress = "0000000000000000000000000000000000000000";
           txid = await exchange.redeemExchange({
-            exchangeAddress,
+            exchangeAddress: MetaData['Exchange']['Address'],
             amount,
             token,
             tokenaddress: MetaData['BaseCurrency']['Address'],
             senderAddress,
+            abi: MetaData['Exchange']['Abi'],
           });
         } catch (err) {
           getLogger().error(`Error calling redeemExchange: ${err.message}`);
@@ -626,11 +632,12 @@ module.exports = {
           try {
             //tokenaddress = metaData.Tokens.PredictionToken.address;
             txid = await exchange.redeemExchange({
-              exchangeAddress,
+              exchangeAddress: MetaData['Exchange']['Address'],
               amount,
               token,
               tokenaddress: MetaData['Tokens'][redeemExchangeToken]['Address'],
               senderAddress,
+              abi: MetaData['Exchange']['Abi'],
             });
           } catch (err) {
             getLogger().error(`Error calling redeemExchange: ${err.message}`);
@@ -673,7 +680,7 @@ module.exports = {
         price,
         orderType,
       } = data;
-      const MetaData = getContractMetadata();
+      const MetaData = await getContractMetadata();
       const exchangeAddress = await getInstance().fromHexAddress(MetaData['Exchange']['Address']);
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
@@ -695,7 +702,7 @@ module.exports = {
 
       try {
         txid = await exchange.orderExchange({
-          exchangeAddress,
+          exchangeAddress: MetaData['Exchange']['Address'],
           amount,
           token,
           tokenaddress,
@@ -703,11 +710,13 @@ module.exports = {
           priceFractN,
           priceFractD,
           orderType,
+          abi: MetaData['Exchange']['Abi'],
         });
       } catch (err) {
         getLogger().error(`Error calling orderExchange: ${err.message}`);
         throw err;
       }
+      console.log(txid);
       let typeOrder;
       if (orderType == 'buy') {
         typeOrder = 'BUYORDER';
@@ -755,15 +764,17 @@ module.exports = {
         orderId,
       } = data;
       let sentTx;
-      const MetaData = getContractMetadata();
+      const MetaData = await getContractMetadata();
       const exchangeAddress = await getInstance().fromHexAddress(MetaData['Exchange']['Address']);
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
+
       try {
         txid = await exchange.cancelOrderExchange({
-          exchangeAddress,
+          exchangeAddress: MetaData['Exchange']['Address'],
           senderAddress,
           orderId,
+          abi: MetaData['Exchange']['Abi'],
         });
 
       } catch (err) {
@@ -790,6 +801,7 @@ module.exports = {
       await DBHelper.cancelOrderByQuery(db.NewOrder, { orderId }, NewOrder);
       return NewOrder;
     },
+
     executeOrderExchange: async (root, data, { db: { Transactions } }) => {
       const {
         senderAddress,
@@ -797,16 +809,18 @@ module.exports = {
         exchangeAmount,
       } = data;
       let sentTx;
-      const MetaData = getContractMetadata();
+      const MetaData = await getContractMetadata();
       const exchangeAddress = await getInstance().fromHexAddress(MetaData['Exchange']['Address']);
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
+
       try {
         txid = await exchange.executeOrderExchange({
-          exchangeAddress,
+          exchangeAddress: MetaData['Exchange']['Address'],
           senderAddress,
           orderId,
           exchangeAmount,
+          abi: MetaData['Exchange']['Abi'],
         });
 
       } catch (err) {
@@ -850,6 +864,7 @@ module.exports = {
         price: xPrice,
         orderType: getOrder.orderType,
         tokenName: getOrder.tokenName,
+        token: getOrder.token,
         amount: xAmount,
         blockNum: 0,
       }

@@ -5,15 +5,14 @@ const fs = require('fs-extra');
 const _ = require('lodash');
 const pubsub = require('../pubsub');
 const { getLogger } = require('../utils/logger');
-const { Utils } = require('rweb3');
+//const { Utils } = require('rweb3');
 const moment = require('moment');
 const BigNumber = require('bignumber.js');
 const { getContractMetadata, isMainnet } = require('../config');
-const { BLOCK_0_TIMESTAMP, SATOSHI_CONVERSION } = require('../constants');
+const { BLOCK_0_TIMESTAMP, SATOSHI_CONVERSION, fill } = require('../constants');
 const { db, DBHelper } = require('../db');
 const updateStatusDB = require('./updateLocalTx');
-const Utility = require('../utils');
-
+const Utils = require('../utils');
 const NewOrder = require('../models/newOrder');
 const CancelOrder = require('../models/cancelOrder');
 const FulfillOrder = require('../models/fulfillOrder');
@@ -27,6 +26,10 @@ const network = require('../api/network');
 const exchange = require('../api/exchange');
 const { getInstance } = require('../rclient');
 const { txState, orderState } = require('../constants');
+const async = require("async");
+const Web3 = require('web3')
+const web3 = new Web3();
+const abi = require('ethjs-abi');
 
 const RPC_BATCH_SIZE = 5;
 const BLOCK_BATCH_SIZE = 200;
@@ -151,9 +154,6 @@ async function sync(db) {
             await getAddressBalances(),
           );
         }
-
-        // nedb doesnt require close db, leave the comment as a reminder
-        // await db.Connection.close();
         getLogger().debug('sleep');
         setTimeout(startSync, 5000);
       // execute rpc batch by batch
@@ -242,7 +242,7 @@ function sendSyncInfo(syncBlockNum, syncBlockTime, syncPercent, peerNodeCount, a
 async function getAddressBalances() {
   const addressObjs = [];
   const addressList = [];
-  try {
+ try {
     const res = await getInstance().listAddressGroupings();
     // grouping: [["qNh8krU54KBemhzX4zWG9h3WGpuCNYmeBd", 0.01], ["qNh8krU54KBemhzX4zWG9h3WGpuCNYmeBd", 0.02]], [...]
     _.each(res, (grouping) => {
@@ -250,7 +250,12 @@ async function getAddressBalances() {
       _.each(grouping, (addressArrItem) => {
         addressObjs.push({
           address: addressArrItem[0],
+          RUNES: new BigNumber(addressArrItem[1]).multipliedBy(SATOSHI_CONVERSION).toString(10),
           runebase: new BigNumber(addressArrItem[1]).multipliedBy(SATOSHI_CONVERSION).toString(10),
+          Wallet: {
+            RUNES: new BigNumber(addressArrItem[1]).multipliedBy(SATOSHI_CONVERSION).toString(10),
+          },
+          Exchange: {},
         });
         addressList.push(addressArrItem[0]);
       });
@@ -258,180 +263,189 @@ async function getAddressBalances() {
   } catch (err) {
     getLogger().error(`listAddressGroupings: ${err.message}`);
   }
-
+  ////////////////////////////////////////////////////////////
   const addressBatches = _.chunk(addressList, RPC_BATCH_SIZE);
   await new Promise(async (resolve) => {
     sequentialLoop(addressBatches.length, async (loop) => {
+      const BalancePromises = [];
+      const StringPromises = [];
+
       _.map(addressBatches[loop.iteration()], async (address) => {
-        const ExchangeTokenBalances = async () => {
-          await new Promise( async (ExchangeTokenBalancesParentResolver) => {
-            let size = Object.keys(MetaData['Tokens']).length;
-            let ExchangeTokenCounter = 0;
-            for (ExchangeTokenName in MetaData['Tokens']) {
-              await new Promise(async function(ExchangeTokenBalanceResolver, reject) {
-                let ExchangeTokenBalance = new BigNumber(0);
-                try {
-                  const hex = await getInstance().getHexAddress(address);
-                  const resp = await exchange.balanceOf({
-                    token: MetaData['Tokens'][ExchangeTokenName]['Address'],
-                    user: hex,
-                    senderAddress: address,
-                  });
-                  ExchangeTokenBalance = resp.balance;
-                } catch (err) {
-                  getLogger().error(`BalanceOf ${address}: ${err.message}`);
-                  ExchangeTokenBalance = '0';
-                }
-                const found = await _.find(addressObjs, { address });
-                const lowerPair = await MetaData['Tokens'][ExchangeTokenName]['Pair'].toLowerCase();
-                const exchangePair = 'exchange' + lowerPair;
-                found[exchangePair] = ExchangeTokenBalance.toString(10);
-                ExchangeTokenCounter++;
-                if (ExchangeTokenCounter == Object.keys(MetaData['Tokens']).length) {
-                  getLogger().debug('Exchange Token Parent Done');
-                  ExchangeTokenBalancesParentResolver();
-                }
-                ExchangeTokenBalanceResolver();
+        const ExchangeTokenPromise = new Promise(async (ExchangeTokenResolver) => {
+          let ExchangeTokenCounter = 0;
+          async.forEach(MetaData['Tokens'], async function(ExchangeToken, callback) {
+            try {
+              let Balance = new BigNumber(0);
+              const hex = await getInstance().getHexAddress(address);
+              const resp = await exchange.balanceOf({
+                token: ExchangeToken['Address'],
+                user: hex,
+                senderAddress: address,
+                exchangeAddress: MetaData['Exchange']['Address'],
+                abi: MetaData['Exchange']['Abi'],
               });
+              Balance = Utils.hexToDecimalString(resp.executionResult.formattedOutput[0]);
+              const found = await _.find(addressObjs, { address });
+              const lowerPair = 'exchange' + ExchangeToken['Pair'].toLowerCase();
+              found['Exchange'][ExchangeToken['Pair']] = await Balance.toString(10);
+              found[lowerPair] = await Balance.toString(10);
+              ExchangeTokenCounter++;
+              if (ExchangeTokenCounter == Object.keys(MetaData['Tokens']).length) {
+                getLogger().debug('Exchange Token Parent Done');
+                ExchangeTokenResolver();
+              }
+            } catch (err) {
+              getLogger().error(`BalanceOf ${address}: ${err.message}`);
             }
-          })
-          .catch(()=> {
-            getLogger().error('exchangeBalances Error');
-            throw 'exchangeBalances';
           });
-        }
+        });
 
-        const WalletTokenBalances = async () => {
-          await new Promise( async (WalletTokenBalancesParentResolver) => {
-            getLogger().debug('Start WalletTokenBalances');
-            let size = Object.keys(MetaData['Tokens']).length;
-            let ExchangeTokenCounter = 0;
-            for (WalletTokenName in MetaData['Tokens']) {
-              await new Promise(async function(WalletTokenBalanceResolver, reject) {
-                let Balance = new BigNumber(0);
-                try {
-                  const resp = await Token.balanceOf({
-                    owner: address,
-                    senderAddress: address,
-                    token: MetaData['Tokens'][WalletTokenName]['Pair'],
-                    tokenAddress: MetaData['Tokens'][WalletTokenName]['Address'],
-                    abi: MetaData['Tokens'][WalletTokenName]['Abi'],
-                    RrcVersion: MetaData['Tokens'][WalletTokenName]['Rrc'],
-                  });
-                  Balance = resp.balance;
-                } catch (err) {
-                  getLogger().error(`BalanceOf ${address}: ${err.message}`);
-                  Balance = '0';
-
-                }
-                const found = await _.find(addressObjs, { address });
-                const lowerPair = await MetaData['Tokens'][WalletTokenName]['Pair'].toLowerCase();
-                found[lowerPair] = Balance.toString(10);
-                ExchangeTokenCounter++;
-                if (ExchangeTokenCounter == Object.keys(MetaData['Tokens']).length) {
-                  getLogger().debug('Wallet Token Parent Done');
-                  WalletTokenBalancesParentResolver();
-                }
-                WalletTokenBalanceResolver();
+        const WalletTokenPromise = new Promise(async (WalletTokenResolve) => {
+          let WalletTokenCounter = 0;
+          async.forEach(MetaData['Tokens'], async function(WalletToken, callback) {
+            try {
+              let Balance = await new BigNumber(0);
+              const resp = await Token.balanceOf({
+                owner: address,
+                senderAddress: address,
+                token: WalletToken['Pair'],
+                tokenAddress: WalletToken['Address'],
+                abi: WalletToken['Abi'],
+                RrcVersion: WalletToken['Rrc'],
               });
+              Balance = resp.balance;
+              const found = await _.find(addressObjs, { address });
+              const lowerPair = WalletToken['Pair'].toLowerCase();
+              found['Wallet'][WalletToken['Pair']] = await Balance.toString(10);
+              found[lowerPair] = await Balance.toString(10);
+              WalletTokenCounter++;
+              if (WalletTokenCounter == Object.keys(MetaData['Tokens']).length) {
+                getLogger().debug('Wallet Token Parent Done');
+                WalletTokenResolve();
+              }
+            } catch (err) {
+              getLogger().error(`BalanceOf ${address}: ${err.message}`);
             }
-          })
-          .catch(()=> {
-            getLogger().error('walletBalances Error');
-            throw 'walletBalances';
           });
-        }
+        });
 
-        const ExchangeBaseCurrencyBalance = async () => {
-          await new Promise( async (ExchangeBaseCurrencyBalanceParentResolve) => {
-            let RunesExchangeBalance = new BigNumber(0);
+        const ExchangeBasePromise = new Promise(async (ExchangeBaseResolve) => {
+            let Balance = await new BigNumber(0);
             try {
               const hex = await getInstance().getHexAddress(address);
               const resp = await exchange.balanceOf({
                 token: MetaData['BaseCurrency']['Address'],
                 user: hex,
                 senderAddress: address,
+                exchangeAddress: MetaData['Exchange']['Address'],
+                abi: MetaData['Exchange']['Abi'],
               });
-              runesExchangeBalance = resp.balance;
+              Balance = Utils.hexToDecimalString(resp.executionResult.formattedOutput[0]);
+              const found = _.find(addressObjs, { address });
+              found.exchangerunes = Balance.toString(10);
+              found['Exchange']['RUNES'] = Balance.toString(10);
+              ExchangeBaseResolve();
             } catch (err) {
               getLogger().error(`BalanceOf ${address}: ${err.message}`);
-              runesExchangeBalance = '0';
             }
-
-            // Update Runes balance for address
-            const found = _.find(addressObjs, { address });
-            found.exchangerunes = runesExchangeBalance.toString(10);
-            ExchangeBaseCurrencyBalanceParentResolve();
-          })
-          .catch(()=> {
-            getLogger().error('ExchangeBaseCurrencyBalances Error');
-            throw 'ExchangeBaseCurrencyBalances';
-          });
-        }
-
-        const WalletBaseCurrencyBalance = async () => {
-          await new Promise( (WalletBaseCurrencyBalanceResolve, reject) => {
-            getLogger().debug('ExchangeTokenBalances done');
-            WalletBaseCurrencyBalanceResolve();
-          })
-          .catch(()=> {
-            getLogger().error('WalletBaseCurrencyBalances Error');
-            throw 'WalletBaseCurrencyBalances';
-          });
-        }
-
-        const handleRejection = async (p) => {
-            return p.catch(err=> ({ error: err }));
-        }
-
-        async function FetchBalances(arr) {
-          getLogger().debug('FetchBalances:');
-          return await Promise.all(
-            [
-              WalletTokenBalances(),
-              ExchangeTokenBalances(),
-              ExchangeBaseCurrencyBalance(),
-              WalletBaseCurrencyBalance(),
-            ]
-            .map(handleRejection)
-          );
-        }
-
-        FetchBalances().then( results  => {
-          loop.next();
-          getLogger().log('Done', results);
         });
 
+
+        BalancePromises.push(ExchangeBasePromise);
+        BalancePromises.push(ExchangeTokenPromise);
+        BalancePromises.push(WalletTokenPromise);
+
       });
+
+
+      await Promise.all(BalancePromises);
+      _.map(addressBatches[loop.iteration()], async (address) => {
+          const StringPromise = new Promise(async (StringResolve) => {
+            async.forEach(MetaData['Tokens'], async function(ExchangeToken, callback) {
+              try {
+              const found = await _.find(addressObjs, { address });
+              found.balance = JSON.stringify(found);
+              StringResolve();
+              } catch (err) {
+                getLogger().error(`BalanceOf ${address}: ${err.message}`);
+              }
+            });
+          });
+
+          StringPromises.push(StringPromise);
+        });
+      await Promise.all(StringPromises);
+      loop.next();
+
     }, () => {
       resolve();
-
     });
   });
 
-  // Add default address with zero balances if no address was used before
+  ///////////////////////////////////////////////////////////
+
+  // Add default address with zero balances if no address was used before ¯\_(ツ)_/¯
   if (_.isEmpty(addressObjs)) {
-    const address = await wallet.getAccountAddress({ accountName: '' });
+    let address;
+    let addressWithLabel;
     const myEmptyObject = {};
-    myEmptyObject['address'] = address;
-    for (EmptyTokenNames in MetaData['Tokens']) {
-      lowerCasePair = MetaData['Tokens'][EmptyTokenNames]['Pair'].toLowerCase();
-      exchangeLowerCasePair = 'exchange' + lowerCasePair;
-      myEmptyObject[lowerCasePair] = '0';
-      myEmptyObject[exchangeLowerCasePair] = '0';
+    const emptyObject = {};
+    try {
+      try {
+        address = await wallet.getAddressesByLabel('default');
+        console.log(address);
+      } catch (err) {
+        if (err.response.status == 500) {
+          try {
+            console.log(err.response.status + ': No Wallet found, Creating new...');
+            address = await wallet.getNewAddress('default');
+          } catch (err) {
+            console.log(err);
+          }
+        }
+      }
+
+      address = Object.keys(address)[0];
+
+      emptyObject['address'] = Object.keys(address)[0];
+      for (EmptyTokenNames in MetaData['Tokens']) {
+        lowerCasePair = MetaData['Tokens'][EmptyTokenNames]['Pair'].toLowerCase();
+        exchangeLowerCasePair = 'exchange' + lowerCasePair;
+        emptyObject[lowerCasePair] = '0';
+        emptyObject[exchangeLowerCasePair] = '0';
+      }
+      emptyObject['RUNES'] = '0';
+      emptyObject['exchangerunes'] = '0';
+
+      /////
+      emptyObject['Wallet'] = {};
+      emptyObject['Exchange'] = {};
+      emptyObject['address'] = address;
+        for (EmptyTokenNames in MetaData['Tokens']) {
+          emptyObject['Exchange'][MetaData['Tokens'][EmptyTokenNames]['Pair']] = '0';
+          emptyObject['Wallet'][MetaData['Tokens'][EmptyTokenNames]['Pair']] = '0';
+        }
+        emptyObject['Exchange']['RUNES'] = '0';
+        emptyObject['Wallet']['RUNES'] = '0';
+        emptyObject['balance'] = JSON.stringify(emptyObject);
+        addressObjs.push(
+          emptyObject,
+        );
+    } catch (err) {
+      console.log(err);
     }
-    myEmptyObject['runebase'] = '0';
-    myEmptyObject['exchangerunes'] = '0';
-    addressObjs.push(
-      myEmptyObject,
-    );
   }
+
+  const addressObjstring = JSON.stringify(addressObjs);
+  addressObjs.balance = addressObjstring;
+
   return addressObjs;
 }
 
 
 async function syncNewOrder(db, startBlock, endBlock, removeHexPrefix) {
   let result;
+  const createNewOrderPromises = [];
   try {
     result = await getInstance().searchLogs(
       startBlock, endBlock, MetaData['Exchange']['Address'],
@@ -442,21 +456,28 @@ async function syncNewOrder(db, startBlock, endBlock, removeHexPrefix) {
     getLogger().error(`ERROR: ${err.message}`);
     return;
   }
-
   getLogger().debug(`${startBlock} - ${endBlock}: Retrieved ${result.length} entries from New Order`);
-  const createNewOrderPromises = [];
 
   _.forEach(result, (event, index) => {
     const blockNum = event.blockNumber;
     const txid = event.transactionHash;
     _.forEachRight(event.log, (rawLog) => {
-      if (rawLog._eventName === 'NewOrder') {
+
+      const topics = rawLog.topics.map(i => '0x' + i );
+      const data = '0x' + rawLog.data;
+      const OutputBytecode = abi.decodeEvent(MetaData['Exchange']['Abi'][16], data, topics);
+      console.log('OutputBytecode');
+      console.log(OutputBytecode);
+
+      if (OutputBytecode._eventName === 'NewOrder' && parseInt(OutputBytecode._time.toString(10)) !== 0) {
         const insertNewOrderDB = new Promise(async (resolve) => {
           try {
-            const newOrder = new NewOrder(blockNum, txid, rawLog).translate();
+            const newOrder = await new NewOrder(blockNum, txid, OutputBytecode, MetaData['Tokens'], MetaData['BaseCurrency']['Address']).translate();
             if (await DBHelper.getCount(db.NewOrder, { txid }) > 0) {
               DBHelper.updateOrderByQuery(db.NewOrder, { txid }, newOrder);
             } else {
+              console.log('inserting Order');
+              console.log(newOrder);
               DBHelper.insertTopic(db.NewOrder, newOrder);
             }
             resolve();
@@ -468,6 +489,7 @@ async function syncNewOrder(db, startBlock, endBlock, removeHexPrefix) {
         createNewOrderPromises.push(insertNewOrderDB);
       }
     });
+
   });
   await Promise.all(createNewOrderPromises);
 }
@@ -492,10 +514,17 @@ async function syncOrderCancelled(db, startBlock, endBlock, removeHexPrefix) {
     const blockNum = event.blockNumber;
     const txid = event.transactionHash;
     _.forEachRight(event.log, (rawLog) => {
-      if (rawLog._eventName === 'OrderCancelled') {
+      const topics = rawLog.topics.map(i => '0x' + i );
+      const data = '0x' + rawLog.data;
+      const OutputBytecode = abi.decodeEvent(MetaData['Exchange']['Abi'][17],
+      data,
+      topics);
+      console.log('OutputBytecode');
+      console.log(OutputBytecode);
+      if (OutputBytecode._eventName === 'OrderCancelled') {
         const removeNewOrderDB = new Promise(async (resolve) => {
           try {
-            const cancelOrder = new CancelOrder(blockNum, txid, rawLog).translate();
+            const cancelOrder = new CancelOrder(blockNum, txid, OutputBytecode).translate();
             const orderId = cancelOrder.orderId;
             await DBHelper.updateCanceledOrdersByQuery(db.NewOrder, { orderId }, cancelOrder);
             resolve();
@@ -532,10 +561,17 @@ async function syncOrderFulfilled(db, startBlock, endBlock, removeHexPrefix) {
     const blockNum = event.blockNumber;
     const txid = event.transactionHash;
     _.forEachRight(event.log, (rawLog) => {
-      if (rawLog._eventName === 'OrderFulfilled') {
+      const topics = rawLog.topics.map(i => '0x' + i );
+      const data = '0x' + rawLog.data;
+      const OutputBytecode = abi.decodeEvent(MetaData['Exchange']['Abi'][18],
+      data,
+      topics);
+      console.log('OutputBytecode');
+      console.log(OutputBytecode);
+      if (OutputBytecode._eventName === 'OrderFulfilled') {
         const fulfillOrderDB = new Promise(async (resolve) => {
           try {
-            const fulfillOrder = new FulfillOrder(blockNum, txid, rawLog).translate();
+            const fulfillOrder = new FulfillOrder(blockNum, txid, OutputBytecode).translate();
             const orderId = fulfillOrder.orderId;
             await DBHelper.updateFulfilledOrdersByQuery(db.NewOrder, { orderId }, fulfillOrder);
             //await DBHelper.removeOrdersByQuery(db.NewOrder, { orderId: fulfillOrder.orderId });
@@ -556,36 +592,43 @@ async function syncOrderFulfilled(db, startBlock, endBlock, removeHexPrefix) {
 
 
 function readFile(srcPath) {
-    return new Promise(function (resolve, reject) {
-        fs.readFile(srcPath, 'utf8', function (err, data) {
-            if (err) {
-                reject(err)
-            } else {
-                resolve(data);
-            }
-        });
-    })
+  return new Promise(function (resolve, reject) {
+    try {
+      fs.readFile(srcPath, 'utf8', function (err, data) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data);
+        }
+      });
+    } catch (err) {
+      getLogger().error(`ERROR: ${err.message}`);
+    }
+  })
 }
 
 
 
 async function addTrade(rawLog, blockNum, txid){
+  const getOrder = await DBHelper.findOne(db.NewOrder, { orderId: rawLog._orderId.toString(10) });
+  //const getOrder = await DBHelper.findTradeAndUpdate(db.NewOrder, { orderId: rawLog._orderId.toString(10) }, rawLog._amount.toString());
+  const trade = new Trade(blockNum, txid, rawLog, getOrder).translate();
+  const orderId = trade.orderId
+  const newAmount = Number(getOrder.amount) - Number(trade.soldTokens);
+  const updateOrder = {
+    amount: newAmount,
+  }
   try {
-    const getOrder = await DBHelper.findOne(db.NewOrder, { orderId: rawLog._orderId.toString(10) });
-    //const getOrder = await DBHelper.findTradeAndUpdate(db.NewOrder, { orderId: rawLog._orderId.toString(10) }, rawLog._amount.toString());
-    const trade = new Trade(blockNum, txid, rawLog, getOrder).translate();
-    const orderId = trade.orderId
-    const newAmount = Number(getOrder.amount) - Number(trade.soldTokens);
-    const updateOrder = {
-      amount: newAmount,
-    }
     if (await DBHelper.getCount(db.Trade, { txid }) > 0) {
       await DBHelper.updateTradeByQuery(db.Trade, { txid }, trade);
     } else {
+      console.log('trade');
+      console.log(trade);
       await DBHelper.insertTopic(db.Trade, trade)
     }
+    console.log('updateOrder');
+    console.log(updateOrder);
     await DBHelper.updateTradeOrderByQuery(db.NewOrder, { orderId }, updateOrder);
-
     getLogger().debug('Trade Inserted');
     return trade;
   } catch (err) {
@@ -593,10 +636,25 @@ async function addTrade(rawLog, blockNum, txid){
   }
 }
 
+async function topicFiller(topics) {
+  try {
+    if(topics.length < 4){
+        topics.push(fill.topic);
+        return await topicFiller(topics);
+    }
+    else return topics;
+  } catch (err) {
+    getLogger().error(`ERROR: ${err.message}`);
+  }
+}
 
 async function syncTrade(db, startBlock, endBlock, removeHexPrefix) {
+  const createTradePromises = [];
+  let topics;
+  let data;
+  let results;
   let result;
-  const blockchainDataPath = Utility.getDataDir();
+  const blockchainDataPath = Utils.getDataDir();
   try {
     result = await getInstance().searchLogs(
       startBlock, endBlock, MetaData['Exchange']['Address'],
@@ -609,13 +667,21 @@ async function syncTrade(db, startBlock, endBlock, removeHexPrefix) {
   }
 
   getLogger().debug(`${startBlock} - ${endBlock}: Retrieved ${result.length} entries from syncTrade`);
-  const createTradePromises = [];
+
   for (let event of result){
     const blockNum = event.blockNumber;
     const txid = event.transactionHash;
     for (let rawLog of event.log){
-      if (rawLog._eventName === 'Trade') {
-        const trade = await addTrade(rawLog, blockNum, txid).then(trade => new Promise(async (resolve) => {
+      topics = rawLog.topics.map(i => '0x' + i );
+      data = '0x' + rawLog.data;
+      topics = await topicFiller(topics);
+      let OutputBytecode = await abi.decodeEvent(MetaData['Exchange']['Abi'][20], data, topics);
+
+      console.log('OutputBytecode');
+      console.log(OutputBytecode);
+
+      if (OutputBytecode._eventName === 'Trade' && parseInt(OutputBytecode._time.toString(10)) !== 0) {
+        const trade = await addTrade(OutputBytecode, blockNum, txid).then(trade => new Promise(async (resolve) => {
         const dataSrc = blockchainDataPath + '/' + trade.tokenName + '.tsv';
         if (!fs.existsSync(dataSrc)){
           fs.writeFile(dataSrc, 'date\topen\thigh\tlow\tclose\tvolume\n', { flag: 'w' }, function(err) {
@@ -637,7 +703,6 @@ async function syncTrade(db, startBlock, endBlock, removeHexPrefix) {
         const LastVolume = fields.slice(0)[5];
         const tradeDate = moment.unix(trade.time).format('YYYY-MM-DD');
         const tradeAmount = trade.amount / 1e8;
-
         if (LastDate == tradeDate) {
           const newVolume = parseFloat(LastVolume) + parseFloat(tradeAmount);
           let newLow = LastLow;
@@ -692,24 +757,23 @@ async function syncTrade(db, startBlock, endBlock, removeHexPrefix) {
 }
 
 function dynamicSort(property) {
-    var sortOrder = 1;
-    if(property[0] === "-") {
-        sortOrder = -1;
-        property = property.substr(1);
+  var sortOrder = 1;
+  if(property[0] === "-") {
+    sortOrder = -1;
+    property = property.substr(1);
+  }
+  return function (a,b) {
+    if(sortOrder == -1){
+      return b[property].toString().localeCompare(a[property]);
+    } else {
+      return a[property].toString().localeCompare(b[property]);
     }
-    return function (a,b) {
-        if(sortOrder == -1){
-            return b[property].toString().localeCompare(a[property]);
-        }else{
-            return a[property].toString().localeCompare(b[property]);
-        }
-    }
+  }
 }
 
 function getPercentageChange(oldNumber, newNumber){
-    var decreaseValue = oldNumber - newNumber;
-
-    return (decreaseValue / oldNumber) * 100;
+  const decreaseValue = oldNumber - newNumber;
+  return (decreaseValue / oldNumber) * 100;
 }
 
 async function syncMarkets(db, startBlock, endBlock, removeHexPrefix) {
@@ -830,13 +894,24 @@ async function syncFundRedeem(db, startBlock, endBlock, removeHexPrefix) {
     const blockNum = event.blockNumber;
     const txid = event.transactionHash;
     _.forEachRight(event.log, (rawLog) => {
-      if (rawLog._eventName === 'Deposit') {
+
+      const topics = rawLog.topics.map(i => '0x' + i );
+      const data = '0x' + rawLog.data;
+      console.log(MetaData['Exchange']['Abi'][14]);
+      const OutputBytecode = abi.decodeEvent(MetaData['Exchange']['Abi'][14],
+      data,
+      topics);
+      console.log('OutputBytecode');
+      console.log(OutputBytecode);
+
+      if (OutputBytecode._eventName === 'Deposit') {
         const fundDB = new Promise(async (resolve) => {
           try {
-            const fund = new FundRedeem(blockNum, txid, rawLog).translate();
+            const fund = new FundRedeem(blockNum, txid, OutputBytecode, MetaData['Tokens'], MetaData['BaseCurrency']).translate();
             if (await DBHelper.getCount(db.FundRedeem, { txid }) > 0) {
               await DBHelper.updateFundRedeemByQuery(db.FundRedeem, { txid }, fund);
             } else {
+              console.log(fund);
               await DBHelper.insertTopic(db.FundRedeem, fund)
             }
             resolve();
@@ -854,13 +929,21 @@ async function syncFundRedeem(db, startBlock, endBlock, removeHexPrefix) {
     const blockNum = event.blockNumber;
     const txid = event.transactionHash;
     _.forEachRight(event.log, (rawLog) => {
-      if (rawLog._eventName === 'Withdrawal') {
+      const topics = rawLog.topics.map(i => '0x' + i );
+      const data = '0x' + rawLog.data;
+      const OutputBytecode = abi.decodeEvent(MetaData['Exchange']['Abi'][15],
+      data,
+      topics);
+      console.log('OutputBytecode');
+      console.log(OutputBytecode);
+      if (OutputBytecode._eventName === 'Withdrawal') {
         const redeemDB = new Promise(async (resolve) => {
           try {
-            const redeem = new FundRedeem(blockNum, txid, rawLog).translate();
+            const redeem = new FundRedeem(blockNum, txid, OutputBytecode, MetaData['Tokens'], MetaData['BaseCurrency']).translate();
             if (await DBHelper.getCount(db.FundRedeem, { txid }) > 0) {
               await DBHelper.updateFundRedeemByQuery(db.FundRedeem, { txid }, redeem);
             } else {
+              console.log(redeem);
               await DBHelper.insertTopic(db.FundRedeem, redeem)
             }
             resolve();

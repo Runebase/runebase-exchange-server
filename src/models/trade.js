@@ -11,6 +11,8 @@ class Trade {
       this.txid = txid;
       this.rawLog = rawLog;
       this.getOrder = getOrder;
+      this.token = 'Unregistered';
+      this.tokenName = 'Unregistered Token';
       this.decode();
     }
   }
@@ -19,13 +21,14 @@ class Trade {
     this.date = new Date(this.rawLog._time.toString(10)*1000);
     this.orderId = this.rawLog._orderId.toString(10);
     this.time = Number(this.rawLog._time.toString(10));
-    this.from = this.rawLog._from.toString();
-    this.to = this.rawLog._to.toString();
+    this.from = this.rawLog._from.toString().substring(2);
+    this.to = this.rawLog._to.toString().substring(2);
     this.soldTokens = this.rawLog._soldTokens.toString(10);
     this.boughtTokens = this.rawLog._boughtTokens.toString(10);
     this.price = this.getOrder.price;
     this.orderType = this.getOrder.orderType;
     this.tokenName = this.getOrder.tokenName;
+    this.token = this.getOrder.token;
     if (this.orderType === "SELLORDER") {
       this.amount = this.soldTokens;
     }
@@ -49,6 +52,7 @@ class Trade {
       price: this.price,
       orderType: this.orderType,
       tokenName: this.tokenName,
+      token: this.token,
       amount: this.amount,
       blockNum: this.blockNum,
     };

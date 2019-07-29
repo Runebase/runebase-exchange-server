@@ -7,24 +7,27 @@ const { isMainnet, getContractMetadata } = require('../config');
 const { orderState } = require('../constants');
 
 class NewOrder {
-  constructor(blockNum, txid, rawLog) {
+  constructor(blockNum, txid, rawLog, tokens, baseCurrencyAddress) {
     if (!_.isEmpty(rawLog)) {
       this.blockNum = blockNum;
       this.txid = txid;
       this.rawLog = rawLog;
+      this.sellToken = rawLog._sellToken.substring(2);
+      this.buyToken = rawLog._buyToken.substring(2);
+      this.tokens = tokens;
+      this.baseCurrencyAddress = baseCurrencyAddress;
       this.decode();
     }
   }
 
   decode() {
-    const metadata = getContractMetadata();
-    for (var key in metadata['Tokens']){
-      if (metadata['Tokens'][key]['Address'] === this.rawLog._sellToken || metadata['Tokens'][key]['Address'] === this.rawLog._buyToken) {
-        this.token = metadata['Tokens'][key]['Pair'];
-        this.tokenName = metadata['Tokens'][key]['Pair'];
+    for (let key in this.tokens){
+      if (this.tokens[key]['Address'] === this.sellToken || this.tokens[key]['Address'] === this.buyToken) {
+        this.token = this.tokens[key]['Pair'];
+        this.tokenName = this.tokens[key]['TokenName'];
       }
     }
-    if (this.rawLog._sellToken === metadata['BaseCurrency']['Address']) {
+    if (this.sellToken === this.baseCurrencyAddress) {
       this.type = 'BUYORDER';
       this.orderType = 'BUYORDER';
     }
@@ -39,8 +42,8 @@ class NewOrder {
     const c = math.number(g);
     this.price = c;
     this.orderId = this.rawLog._id.toString(10);
-    this.sellToken = this.rawLog._sellToken;
-    this.buyToken = this.rawLog._buyToken;
+    this.sellToken = this.sellToken;
+    this.buyToken = this.buyToken;
     this.startAmount = this.rawLog._amount.toString(10);
     this.amount = this.rawLog._amount.toString(10);
     this.owner = this.rawLog._owner;
@@ -57,9 +60,9 @@ class NewOrder {
       price: this.price,
       status: orderState.ACTIVE,
       orderId: this.orderId,
-      owner: Decoder.toRunebaseAddress(this.owner, isMainnet()),
-      sellToken: this.sellToken,
-      buyToken: this.buyToken,
+      owner: Decoder.toRunebaseAddress(this.owner.substring(2), isMainnet()),
+      sellToken: this.sellToken.substring(2),
+      buyToken: this.buyToken.substring(2),
       priceMul: this.priceMul,
       priceDiv: this.priceDiv,
       time: this.time,

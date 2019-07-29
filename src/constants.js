@@ -20,6 +20,10 @@ module.exports = {
     FAIL: 'FAIL',
   },
 
+  fill: {
+    topic: '0x0000000000000000000000000000000000000000000000000000000000000000',
+  },
+
   orderState: {
     CONFIRMED: 'CONFIRMED',
     PENDING: 'PENDING',

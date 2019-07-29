@@ -64,11 +64,8 @@ async function initDB() {
 
     const ImportBaseCurrency = () => new Promise((resolve, reject) => {
       db.BaseCurrency.count({}, function (err, count) {
-        console.log('BaseCurrecyCount: ' + count);
         if (count === 0) {
           const baseCurrency = new BaseCurrency(MetaData['BaseCurrency']).translate();
-          console.log(baseCurrency);
-          console.log(count);
           db.BaseCurrency.insert(baseCurrency).then((value)=>{
               resolve();
           });
@@ -85,8 +82,6 @@ async function initDB() {
       db.Markets.count({ market: MetaData['Tokens'][Key]['Pair'] }, function (err, count) {
         if (count === 0) {
           const market = new Market(MetaData['Tokens'][Key]['Pair'], MetaData['Tokens'][Key]).translate();
-          console.log(market);
-          console.log(count);
           db.Markets.insert(market).then((value)=>{
               resolve();
           });
@@ -98,14 +93,16 @@ async function initDB() {
 
     (async() => {
       for (let key in MetaData['Tokens']) {
-        await ImportMarket(key);
+        try {
+          await ImportMarket(key);
+        } catch (err) {
+          logger.error(`ImportMarket error: ${err.message}`);
+        }
+
       }
     })();
 
-
     for (MarketName in MetaData['Tokens']){
-      console.log('token: ' + MarketName);
-      console.log('token: ' + Object.keys(MetaData['Tokens']).length);
       const addMarket = MetaData['Tokens'][MarketName]['Pair'];
       const dataSrc = blockchainDataPath + '/' + addMarket + '.tsv';
       if (!fs.existsSync(dataSrc)){

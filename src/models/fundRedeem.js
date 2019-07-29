@@ -7,30 +7,37 @@ const { isMainnet, getContractMetadata } = require('../config');
 const { orderState, SATOSHI_CONVERSION } = require('../constants');
 
 class NewOrder {
-  constructor(blockNum, txid, rawLog) {
+  constructor(blockNum, txid, rawLog, tokens, baseCurrency) {
     if (!_.isEmpty(rawLog)) {
       this.blockNum = blockNum;
       this.txid = txid;
       this.rawLog = rawLog;
+      this.tokens = tokens;
+      this.baseCurrency = baseCurrency;
+      this.token = 'Unregistered';
+      this.tokenName = 'Unregistered Token';
       this.decode();
     }
   }
 
   decode() {
+    this.tokenAddress = this.rawLog._token.substring(2);
+    this.owner = this.rawLog._owner.substring(2);
     this.amount =  new BigNumber(this.rawLog._amount).dividedBy(SATOSHI_CONVERSION).toString(10);
     this.time = this.rawLog._time.toString(10);
     this.date = new Date(this.rawLog._time.toString(10)*1000);
-    const metadata = getContractMetadata();
-    if (this.rawLog._token === metadata['BaseCurrency']['Address']) {
-      this.tokenName = metadata['BaseCurrency']['Pair'];
+    if (this.tokenAddress === this.baseCurrency['Address']) {
+      console.log('DEPOSIT/WITHDRAW RUNES');
+      this.token = this.baseCurrency['Pair'];
+      this.tokenName = this.baseCurrency['Name'];
     }
-    for (var key in metadata['Tokens']){
-      if (metadata['Tokens'][key]['Address'] === this.rawLog._token) {
-        this.tokenName = metadata['Tokens'][key]["Pair"];
+    for (let key in this.tokens){
+      if (this.tokens[key]['Address'] === this.tokenAddress) {
+        console.log('DEPOSIT/WITHDRAW ' + this.tokens[key]['Pair']);
+        this.token = this.tokens[key]['Pair'];
+        this.tokenName = this.tokens[key]['TokenName'];
       }
     }
-    this.token = this.rawLog._token;
-    this.owner = this.rawLog._owner;
     if (this.rawLog._eventName == 'Deposit') {
       this.type = 'DEPOSITEXCHANGE';
     }
@@ -44,6 +51,7 @@ class NewOrder {
       txid: this.txid,
       type: this.type,
       token: this.token,
+      tokenAddress: this.tokenAddress,
       tokenName: this.tokenName,
       status: 'CONFIRMED',
       owner: Decoder.toRunebaseAddress(this.owner, isMainnet()),

@@ -3,16 +3,19 @@ const _ = require('lodash');
 const { getInstance } = require('../rclient');
 
 const Wallet = {
-  async getAccountAddress(args) {
-    const {
-      accountName, // string
-    } = args;
 
-    if (_.isUndefined(accountName)) {
-      throw new TypeError('accountName needs to be defined');
+  async getAddressesByLabel(label) {
+    if (_.isUndefined(label)) {
+      throw new TypeError('Addresslabel needs to be defined');
     }
+    return getInstance().getAddressesByLabel(label);
+  },
 
-    return getInstance().getAccountAddress(accountName);
+  async getNewAddress(label) {
+    if (_.isUndefined(label)) {
+      throw new TypeError('Addresslabel needs to be defined');
+    }
+    return getInstance().getNewAddress(label);
   },
 
   async getTransaction(args) {

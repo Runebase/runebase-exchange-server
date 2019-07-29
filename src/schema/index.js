@@ -73,6 +73,7 @@ type Trade {
   soldTokens: String!
   boughtTokens: String!
   tokenName: String!
+  token: String!
   orderType: String!
   price: String!
   orderId: String!
@@ -100,7 +101,7 @@ type Transaction {
   receiverAddress: String
   name: String
   options: [String!]
-  token: _TokenType
+  token: String!
   amount: String
 }
 
@@ -309,6 +310,7 @@ type myTradeInfo {
   to: String!
   soldTokens: String!
   boughtTokens: String!
+  token: String!
   tokenName: String!
   orderType: String!
   type: String!
@@ -327,6 +329,7 @@ type buyHistoryInfo {
   to: String!
   soldTokens: String!
   boughtTokens: String!
+  token: String!
   tokenName: String!
   orderType: String!
   type: String!
@@ -345,6 +348,7 @@ type sellHistoryInfo {
   to: String!
   soldTokens: String!
   boughtTokens: String!
+  token: String!
   tokenName: String!
   orderType: String!
   type: String!
@@ -419,6 +423,7 @@ input TradeFilter {
   to: String
   soldTokens: String
   boughtTokens: String
+  token: String
   tokenName: String
   orderType: String
   price: String
@@ -475,28 +480,28 @@ type Mutation {
   transfer(
     senderAddress: String!
     receiverAddress: String!
-    token: _TokenType!
+    token: String!
     amount: String!
   ): Transaction
 
   transferExchange(
     senderAddress: String!
     receiverAddress: String!
-    token: _TokenType!
+    token: String!
     amount: String!
   ): Transaction
 
   redeemExchange(
     senderAddress: String!
     receiverAddress: String!
-    token: _TokenType!
+    token: String!
     amount: String!
   ): Transaction
 
   orderExchange(
     senderAddress: String!
     receiverAddress: String!
-    token: _TokenType!
+    token: String!
     amount: String!
     price: String!
     orderType: String!
@@ -537,12 +542,13 @@ input Order {
 
 type AddressBalance {
   address: String!,
-  runebase: String!,
+  RUNES: String!,
   pred: String!,
   fun: String!,
   exchangerunes: String!,
   exchangepred: String!,
   exchangefun: String!,
+  balance: String!
 }
 
 enum _OrderStatusType {
@@ -563,12 +569,6 @@ enum _TradeStatusType {
   CONFIRMED
   PENDING
   FAIL
-}
-
-enum _TokenType {
-  RUNES
-  PRED
-  FUN
 }
 
 enum _OrderDirection {
