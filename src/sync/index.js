@@ -316,8 +316,9 @@ async function getAddressBalances() {
               Balance = resp.balance;
               const found = await _.find(addressObjs, { address });
               const lowerPair = WalletToken['Pair'].toLowerCase();
-              found['Wallet'][WalletToken['Pair']] = await Balance.toString(10);
-              found[lowerPair] = await Balance.toString(10);
+              console.log(new BigNumber(Balance).dividedBy(SATOSHI_CONVERSION).toString(10));
+              found['Wallet'][WalletToken['Pair']] = new BigNumber(Balance).dividedBy(SATOSHI_CONVERSION).toString(10);
+              found[lowerPair] = new BigNumber(Balance).dividedBy(SATOSHI_CONVERSION).toString(10);
               WalletTokenCounter++;
               if (WalletTokenCounter == Object.keys(MetaData['Tokens']).length) {
                 getLogger().debug('Wallet Token Parent Done');
@@ -343,7 +344,7 @@ async function getAddressBalances() {
               Balance = Utils.hexToDecimalString(resp.executionResult.formattedOutput[0]);
               const found = _.find(addressObjs, { address });
               found.exchangerunes = Balance.toString(10);
-              found['Exchange']['RUNES'] = Balance.toString(10);
+              found['Exchange'][MetaData['BaseCurrency']['Pair']] = Balance.toString(10);
               ExchangeBaseResolve();
             } catch (err) {
               getLogger().error(`BalanceOf ${address}: ${err.message}`);
@@ -361,7 +362,7 @@ async function getAddressBalances() {
       await Promise.all(BalancePromises);
       _.map(addressBatches[loop.iteration()], async (address) => {
           const StringPromise = new Promise(async (StringResolve) => {
-            async.forEach(MetaData['Tokens'], async function(ExchangeToken, callback) {
+            async.forEach(MetaData['Tokens'], async (ExchangeToken, callback) => {
               try {
               const found = await _.find(addressObjs, { address });
               found.balance = JSON.stringify(found);
@@ -414,7 +415,7 @@ async function getAddressBalances() {
         emptyObject[lowerCasePair] = '0';
         emptyObject[exchangeLowerCasePair] = '0';
       }
-      emptyObject['RUNES'] = '0';
+      emptyObject[MetaData['BaseCurrency']['Pair']] = '0';
       emptyObject['exchangerunes'] = '0';
 
       /////
@@ -425,8 +426,8 @@ async function getAddressBalances() {
           emptyObject['Exchange'][MetaData['Tokens'][EmptyTokenNames]['Pair']] = '0';
           emptyObject['Wallet'][MetaData['Tokens'][EmptyTokenNames]['Pair']] = '0';
         }
-        emptyObject['Exchange']['RUNES'] = '0';
-        emptyObject['Wallet']['RUNES'] = '0';
+        emptyObject['Exchange'][MetaData['BaseCurrency']['Pair']] = '0';
+        emptyObject['Wallet'][MetaData['BaseCurrency']['Pair']] = '0';
         emptyObject['balance'] = JSON.stringify(emptyObject);
         addressObjs.push(
           emptyObject,
@@ -690,7 +691,6 @@ async function syncTrade(db, startBlock, endBlock, removeHexPrefix) {
           });
         }
         fs.closeSync(fs.openSync(dataSrc, 'a'));
-        console.log('Begin Charting Data');
         results = await readFile(dataSrc);
         const lines = results.trim().split('\n');
         const lastLine = lines.slice(-1)[0];
@@ -703,7 +703,6 @@ async function syncTrade(db, startBlock, endBlock, removeHexPrefix) {
         const LastVolume = fields.slice(0)[5];
         const tradeDate = moment.unix(trade.time).format('YYYY-MM-DD');
         const tradeAmount = trade.amount / 1e8;
-        console.log('Sliced Charting Data');
         if (LastDate == tradeDate) {
           const newVolume = parseFloat(LastVolume) + parseFloat(tradeAmount);
           let newLow = LastLow;
@@ -716,8 +715,6 @@ async function syncTrade(db, startBlock, endBlock, removeHexPrefix) {
           }
           const upData = tradeDate + '\t' + LastClose + '\t' + newHigh + '\t' + newLow + '\t' + trade.price + '\t' + newVolume.toFixed(8);
           buffer = Buffer.from(upData);
-          console.log(upData);
-          console.log(buffer);
 
           fs.open(dataSrc, 'a', function(err, fd) {
             if (err) {
@@ -727,7 +724,6 @@ async function syncTrade(db, startBlock, endBlock, removeHexPrefix) {
               if (err) {
                 return console.log(err);
               }
-              console.log('checkpoint');
               const re = new RegExp(lastLine,"g");
               const result = data.replace(re, upData);
               fs.writeFile(dataSrc, result, 'utf8', function (err) {
@@ -740,14 +736,9 @@ async function syncTrade(db, startBlock, endBlock, removeHexPrefix) {
             });
           }
           if (LastDate != tradeDate) {
-            console.log('new trade Charting Data');
             const newData = tradeDate + '\t' + LastClose + '\t' + trade.price + '\t' + trade.price + '\t' + trade.price + '\t' + tradeAmount.toFixed(8) + '\n' ;
             const buffer = new Buffer(newData);
-            console.log(newData);
-            console.log(buffer);
-            console.log(dataSrc);
             fs.open(dataSrc, 'a', function(err, fd) {
-                console.log(fd);
                 if (err) {
                     throw 'error opening file: ' + err;
                 }

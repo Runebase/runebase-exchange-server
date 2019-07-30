@@ -525,6 +525,7 @@ module.exports = {
 
       return tx;
     },
+
     transferExchange: async (root, data, { db: { FundRedeem } }) => {
       const {
         senderAddress,
@@ -540,7 +541,7 @@ module.exports = {
 
       if (token == MetaData['BaseCurrency']['Pair']) {
         try {
-          txid = await exchange.fundExchangeRunes({
+          txid = await exchange.depositExchangeBaseCurrency({
             exchangeAddress: MetaData['Exchange']['Address'],
             amount,
             senderAddress,
@@ -597,6 +598,7 @@ module.exports = {
       await DBHelper.insertTopic(db.FundRedeem, deposit);
       return deposit;
     },
+
     redeemExchange: async (root, data, { db: { FundRedeem } }) => {
       const {
         senderAddress,
@@ -671,6 +673,7 @@ module.exports = {
       await DBHelper.insertTopic(db.FundRedeem, withdrawal);
       return withdrawal;
     },
+
     orderExchange: async (root, data, { db: { Transactions } }) => {
       const {
         senderAddress,
@@ -758,6 +761,7 @@ module.exports = {
       await DBHelper.insertTopic(db.NewOrder, tx);
       return tx;
     },
+
     cancelOrderExchange: async (root, data, { db: { Transactions } }) => {
       const {
         senderAddress,

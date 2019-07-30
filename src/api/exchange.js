@@ -41,7 +41,7 @@ const Exchange = {
     //return res;
   },
 
-  async fundExchangeRunes(args) {
+  async depositExchangeBaseCurrency(args) {
 
     const {
       exchangeAddress, // address
