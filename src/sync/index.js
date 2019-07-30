@@ -682,7 +682,7 @@ async function syncTrade(db, startBlock, endBlock, removeHexPrefix) {
 
       if (OutputBytecode._eventName === 'Trade' && parseInt(OutputBytecode._time.toString(10)) !== 0) {
         const trade = await addTrade(OutputBytecode, blockNum, txid).then(trade => new Promise(async (resolve) => {
-        const dataSrc = blockchainDataPath + '/' + trade.tokenName + '.tsv';
+        const dataSrc = blockchainDataPath + '/' + trade.token + '.tsv';
         if (!fs.existsSync(dataSrc)){
           fs.writeFile(dataSrc, 'date\topen\thigh\tlow\tclose\tvolume\n', { flag: 'w' }, function(err) {
             if (err)
@@ -690,7 +690,7 @@ async function syncTrade(db, startBlock, endBlock, removeHexPrefix) {
           });
         }
         fs.closeSync(fs.openSync(dataSrc, 'a'));
-
+        console.log('Begin Charting Data');
         results = await readFile(dataSrc);
         const lines = results.trim().split('\n');
         const lastLine = lines.slice(-1)[0];
@@ -703,6 +703,7 @@ async function syncTrade(db, startBlock, endBlock, removeHexPrefix) {
         const LastVolume = fields.slice(0)[5];
         const tradeDate = moment.unix(trade.time).format('YYYY-MM-DD');
         const tradeAmount = trade.amount / 1e8;
+        console.log('Sliced Charting Data');
         if (LastDate == tradeDate) {
           const newVolume = parseFloat(LastVolume) + parseFloat(tradeAmount);
           let newLow = LastLow;
@@ -715,6 +716,8 @@ async function syncTrade(db, startBlock, endBlock, removeHexPrefix) {
           }
           const upData = tradeDate + '\t' + LastClose + '\t' + newHigh + '\t' + newLow + '\t' + trade.price + '\t' + newVolume.toFixed(8);
           buffer = Buffer.from(upData);
+          console.log(upData);
+          console.log(buffer);
 
           fs.open(dataSrc, 'a', function(err, fd) {
             if (err) {
@@ -724,6 +727,7 @@ async function syncTrade(db, startBlock, endBlock, removeHexPrefix) {
               if (err) {
                 return console.log(err);
               }
+              console.log('checkpoint');
               const re = new RegExp(lastLine,"g");
               const result = data.replace(re, upData);
               fs.writeFile(dataSrc, result, 'utf8', function (err) {
@@ -736,15 +740,22 @@ async function syncTrade(db, startBlock, endBlock, removeHexPrefix) {
             });
           }
           if (LastDate != tradeDate) {
+            console.log('new trade Charting Data');
             const newData = tradeDate + '\t' + LastClose + '\t' + trade.price + '\t' + trade.price + '\t' + trade.price + '\t' + tradeAmount.toFixed(8) + '\n' ;
             const buffer = new Buffer(newData);
+            console.log(newData);
+            console.log(buffer);
+            console.log(dataSrc);
             fs.open(dataSrc, 'a', function(err, fd) {
+                console.log(fd);
                 if (err) {
                     throw 'error opening file: ' + err;
                 }
                 fs.write(fd, buffer, 0, buffer.length, null, function(err) {
+                    console.log(fd);
                     if (err) throw 'error writing file: ' + err;
                     fs.close(fd, function() {
+                        console.log('End Charting Data');
                         resolve();
                     })
                 });
@@ -796,7 +807,7 @@ async function syncMarkets(db, startBlock, endBlock, removeHexPrefix) {
                       {
                         $and: [
                         { 'date': { $gt: new Date(inputDate) } },
-                        { tokenName: MetaData['Tokens'][key]['Pair'] },
+                        { token: MetaData['Tokens'][key]['Pair'] },
                         ]
                       },
                     ['time', 'tokenName', 'date', 'price', 'amount', 'orderType', 'boughtTokens', 'soldTokens'],
@@ -823,7 +834,7 @@ async function syncMarkets(db, startBlock, endBlock, removeHexPrefix) {
                     db.NewOrder,
                       {
                         $and: [
-                        { tokenName: MetaData['Tokens'][key]['Pair'] },
+                        { token: MetaData['Tokens'][key]['Pair'] },
                         { status: orderState.ACTIVE },
                         { orderType: 'SELLORDER' },
                         ]
