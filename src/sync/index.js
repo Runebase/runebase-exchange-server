@@ -469,7 +469,7 @@ async function getAddressBalances() {
           RUNES: new BigNumber(addressArrItem[1]).multipliedBy(SATOSHI_CONVERSION).toString(10),
           runebase: new BigNumber(addressArrItem[1]).multipliedBy(SATOSHI_CONVERSION).toString(10),
           Wallet: {
-            RUNES: new BigNumber(addressArrItem[1]).multipliedBy(SATOSHI_CONVERSION).toString(10),
+            RUNES: new BigNumber(addressArrItem[1]).toString(10),
           },
           Exchange: {},
         });
@@ -484,13 +484,40 @@ async function getAddressBalances() {
   await new Promise(async (resolve) => {
     sequentialLoop(addressBatches.length, async (loop) => {
       const BalancePromises = [];
+      const ExchangeBasePromises = [];
+      const ExchangeTokenPromises = [];
       const StringPromises = [];
       const markets = await db.Markets.find({});
 
       _.map(addressBatches[loop.iteration()], async (address) => {
+        const ExchangeBasePromise = new Promise(async (ExchangeBaseResolve) => {
+            try {
+              let Balance = new BigNumber(0);
+              const hex = await getInstance().getHexAddress(address);
+              const resp = await exchange.balanceOf({
+                token: MetaData['BaseCurrency']['Address'],
+                user: hex,
+                senderAddress: address,
+                exchangeAddress: MetaData['Exchange']['Address'],
+                abi: MetaData['Exchange']['Abi'],
+              });
+              Balance = await Utils.hexToDecimalString(resp.executionResult.formattedOutput[0]);
+              const found = _.find(addressObjs, { address });
+              found.exchangerunes = Balance.toString(10);
+              found['Exchange'][MetaData['BaseCurrency']['Pair']] = Balance.toString(10);
+              ExchangeBaseResolve();
+            } catch (err) {
+              getLogger().error(`BalanceOf ${address}: ${err.message}`);
+            }
+        });
+        ExchangeBasePromises.push(ExchangeBasePromise);
+      });
+      await Promise.all(ExchangeBasePromises);
+
+      _.map(addressBatches[loop.iteration()], async (address) => {
         const ExchangeTokenPromise = new Promise(async (ExchangeTokenResolver) => {
           let ExchangeTokenCounter = 0;
-          async.forEach(markets, async function(ExchangeToken, callback) {
+          for await (const ExchangeToken of markets) {
             try {
               let Balance = new BigNumber(0);
               const hex = await getInstance().getHexAddress(address);
@@ -502,10 +529,10 @@ async function getAddressBalances() {
                 abi: MetaData['Exchange']['Abi'],
               });
               Balance = Utils.hexToDecimalString(resp.executionResult.formattedOutput[0]);
-              const found = await _.find(addressObjs, { address });
+              const found = _.find(addressObjs, { address });
               const lowerPair = 'exchange' + ExchangeToken['market'].toLowerCase();
-              found['Exchange'][ExchangeToken['market']] = await Balance.toString(10);
-              found[lowerPair] = await Balance.toString(10);
+              found['Exchange'][ExchangeToken['market']] = await new BigNumber(Balance).dividedBy(SATOSHI_CONVERSION).toString(10);
+              found[lowerPair] = Balance.toString(10);
               ExchangeTokenCounter++;
               if (ExchangeTokenCounter == Object.keys(markets).length) {
                 getLogger().debug('Exchange Token Parent Done');
@@ -514,15 +541,19 @@ async function getAddressBalances() {
             } catch (err) {
               getLogger().error(`BalanceOf ${address}: ${err.message}`);
             }
-          });
+          };
         });
+        ExchangeTokenPromises.push(ExchangeTokenPromise);
+      });
+      await Promise.all(ExchangeTokenPromises);
 
+      _.map(addressBatches[loop.iteration()], async (address) => {
         const WalletTokenPromise = new Promise(async (WalletTokenResolve) => {
           let WalletTokenCounter = 0;
-          async.forEach(markets, async function(WalletToken, callback) {
+          for await (const WalletToken of markets) {
             try {
               const myAbi = MetaData['TokenAbi'][WalletToken.abi]
-              let Balance = await new BigNumber(0);
+              let Balance = new BigNumber(0);
               const resp = await Token.balanceOf({
                 owner: address,
                 senderAddress: address,
@@ -531,7 +562,7 @@ async function getAddressBalances() {
                 abi: myAbi,
               });
               Balance = resp.balance;
-              const found = await _.find(addressObjs, { address });
+              const found = _.find(addressObjs, { address });
               const lowerPair = WalletToken['market'].toLowerCase();
               console.log(new BigNumber(Balance).dividedBy(SATOSHI_CONVERSION).toString(10));
               found['Wallet'][WalletToken['market']] = new BigNumber(Balance).dividedBy(SATOSHI_CONVERSION).toString(10);
@@ -544,39 +575,14 @@ async function getAddressBalances() {
             } catch (err) {
               getLogger().error(`BalanceOf ${address}: ${err.message}`);
             }
-          });
+          };
         });
 
-        const ExchangeBasePromise = new Promise(async (ExchangeBaseResolve) => {
-            let Balance = await new BigNumber(0);
-            try {
-              const hex = await getInstance().getHexAddress(address);
-              const resp = await exchange.balanceOf({
-                token: MetaData['BaseCurrency']['Address'],
-                user: hex,
-                senderAddress: address,
-                exchangeAddress: MetaData['Exchange']['Address'],
-                abi: MetaData['Exchange']['Abi'],
-              });
-              Balance = Utils.hexToDecimalString(resp.executionResult.formattedOutput[0]);
-              const found = _.find(addressObjs, { address });
-              found.exchangerunes = Balance.toString(10);
-              found['Exchange'][MetaData['BaseCurrency']['Pair']] = Balance.toString(10);
-              ExchangeBaseResolve();
-            } catch (err) {
-              getLogger().error(`BalanceOf ${address}: ${err.message}`);
-            }
-        });
-
-
-        BalancePromises.push(ExchangeBasePromise);
-        BalancePromises.push(ExchangeTokenPromise);
         BalancePromises.push(WalletTokenPromise);
 
       });
-
-
       await Promise.all(BalancePromises);
+
       _.map(addressBatches[loop.iteration()], async (address) => {
           const StringPromise = new Promise(async (StringResolve) => {
             async.forEach(markets, async (ExchangeToken, callback) => {
