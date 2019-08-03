@@ -35,6 +35,12 @@ class Trade {
     if (this.orderType === "BUYORDER") {
       this.amount = this.boughtTokens;
     }
+    if (this.getOrder.sellToken == '0000000000000000000000000000000000000000') {
+      this.tokenAddress = this.getOrder.buyToken;
+    }
+    if (this.getOrder.buyToken == '0000000000000000000000000000000000000000') {
+      this.tokenAddress = this.getOrder.sellToken;
+    }
   }
 
   translate() {
@@ -53,6 +59,7 @@ class Trade {
       orderType: this.orderType,
       tokenName: this.tokenName,
       token: this.token,
+      tokenAddress: this.tokenAddress,
       amount: this.amount,
       blockNum: this.blockNum,
     };

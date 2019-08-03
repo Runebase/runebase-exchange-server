@@ -18,7 +18,6 @@ const Token = {
       token,
       tokenAddress,
       abi,
-      RrcVersion,
     } = args;
 
     if (_.isUndefined(spender)) {
@@ -38,9 +37,6 @@ const Token = {
     }
     if (_.isUndefined(abi)) {
       throw new TypeError('owner needs to be defined');
-    }
-    if (_.isUndefined(RrcVersion)) {
-      throw new TypeError('RrcVersion needs to be defined');
     }
 
     return getContract(tokenAddress, abi).send('approve', {
@@ -137,7 +133,6 @@ const Token = {
       token,
       tokenAddress,
       abi,
-      RrcVersion,
     } = args;
 
     if (_.isUndefined(owner)) {
@@ -154,9 +149,6 @@ const Token = {
     }
     if (_.isUndefined(abi)) {
       throw new TypeError('abi needs to be defined');
-    }
-    if (_.isUndefined(RrcVersion)) {
-      throw new TypeError('RrcVersion needs to be defined');
     }
     const res = await getContract(tokenAddress, abi).call('balanceOf', {
       methodArgs: [owner],

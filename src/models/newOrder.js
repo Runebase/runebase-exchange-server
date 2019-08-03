@@ -16,15 +16,17 @@ class NewOrder {
       this.buyToken = rawLog._buyToken.substring(2);
       this.tokens = tokens;
       this.baseCurrencyAddress = baseCurrencyAddress;
+      this.token = 'Unregistered';
+      this.tokenName = 'Unregistered Token';
       this.decode();
     }
   }
 
   decode() {
     for (let key in this.tokens){
-      if (this.tokens[key]['Address'] === this.sellToken || this.tokens[key]['Address'] === this.buyToken) {
-        this.token = this.tokens[key]['Pair'];
-        this.tokenName = this.tokens[key]['TokenName'];
+      if (this.tokens[key]['address'] === this.sellToken || this.tokens[key]['address'] === this.buyToken) {
+        this.token = this.tokens[key]['market'];
+        this.tokenName = this.tokens[key]['tokenName'];
       }
     }
     if (this.sellToken === this.baseCurrencyAddress) {
@@ -61,8 +63,8 @@ class NewOrder {
       status: orderState.ACTIVE,
       orderId: this.orderId,
       owner: Decoder.toRunebaseAddress(this.owner.substring(2), isMainnet()),
-      sellToken: this.sellToken.substring(2),
-      buyToken: this.buyToken.substring(2),
+      sellToken: this.sellToken,
+      buyToken: this.buyToken,
       priceMul: this.priceMul,
       priceDiv: this.priceDiv,
       time: this.time,

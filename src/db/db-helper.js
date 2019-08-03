@@ -50,6 +50,7 @@ class DBHelper {
     }
   }
 
+
   static async updateTopicByQuery(database, query, topic) {
     try {
       await database.update(

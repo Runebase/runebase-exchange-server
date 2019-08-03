@@ -78,29 +78,29 @@ async function initDB() {
     await ImportBaseCurrency();
 
 
-    const ImportMarket = (Key) => new Promise((resolve, reject) => {
-      db.Markets.count({ market: MetaData['Tokens'][Key]['Pair'] }, function (err, count) {
-        if (count === 0) {
-          const market = new Market(MetaData['Tokens'][Key]['Pair'], MetaData['Tokens'][Key]).translate();
-          db.Markets.insert(market).then((value)=>{
-              resolve();
-          });
-        } else {
-          resolve();
-        }
-      })
-    });
+//    const ImportMarket = (Key) => new Promise((resolve, reject) => {
+//      db.Markets.count({ market: MetaData['Tokens'][Key]['Pair'] }, function (err, count) {
+//        if (count === 0) {
+//          const market = new Market(MetaData['Tokens'][Key]['Pair'], MetaData['Tokens'][Key]).translate();
+//          db.Markets.insert(market).then((value)=>{
+//              resolve();
+//          });
+//        } else {
+//          resolve();
+//        }
+//      })
+//    });
 
-    (async() => {
-      for (let key in MetaData['Tokens']) {
-        try {
-          await ImportMarket(key);
-        } catch (err) {
-          logger.error(`ImportMarket error: ${err.message}`);
-        }
+//    (async() => {
+//      for (let key in MetaData['Tokens']) {
+//        try {
+//          await ImportMarket(key);
+//        } catch (err) {
+//          logger.error(`ImportMarket error: ${err.message}`);
+//        }
 
-      }
-    })();
+//      }
+//    })();
 
     for (MarketName in MetaData['Tokens']){
       const addMarket = MetaData['Tokens'][MarketName]['Pair'];
@@ -203,6 +203,48 @@ class DBHelper {
     }
   }
 
+  static async changeMarketByQuery(database, query, topic) {
+    try {
+      await database.update(
+        query,
+        {
+          $set: {
+            token: topic.market,
+            tokenName: topic.tokenName,
+          },
+        },
+        { multi: true },
+      );
+    } catch (err) {
+      getLogger().error(`Error update Topic by query:${query}: ${err.message}`);
+    }
+  }
+
+
+  static async updateMarketByQuery(database, query, topic) {
+    try {
+      await database.update(
+        query,
+        {
+          $set: {
+            market: topic.market,
+            tokenName: topic.tokenName,
+            price: topic.price,
+            change: topic.change,
+            volume: topic.volume,
+            address: topic.address,
+            abi: topic.abi,
+            image: topic.image,
+            decimals: topic.decimals,
+          },
+        },
+        { multi: true },
+      );
+    } catch (err) {
+      getLogger().error(`Error update Topic by query:${query}: ${err.message}`);
+    }
+  }
+
   /*
   *removeOrdersByQuery
   *
@@ -213,6 +255,19 @@ class DBHelper {
       getLogger().debug(`Remove: ${numRemoved} Orders query:${query}`);
     } catch (err) {
       getLogger().error(`Remove Orders by query:${query}: ${err.message}`);
+    }
+  }
+
+  /*
+  *removeMarketByQuery
+  *
+  */
+  static async removeMarketByQuery(orderDb, query) {
+    try {
+      const numRemoved = await orderDb.remove(query, { multi: true });
+      getLogger().debug(`Remove: ${numRemoved} Market query:${query}`);
+    } catch (err) {
+      getLogger().error(`Remove Market by query:${query}: ${err.message}`);
     }
   }
 

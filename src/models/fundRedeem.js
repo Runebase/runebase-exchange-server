@@ -32,10 +32,10 @@ class NewOrder {
       this.tokenName = this.baseCurrency['Name'];
     }
     for (let key in this.tokens){
-      if (this.tokens[key]['Address'] === this.tokenAddress) {
-        console.log('DEPOSIT/WITHDRAW ' + this.tokens[key]['Pair']);
-        this.token = this.tokens[key]['Pair'];
-        this.tokenName = this.tokens[key]['TokenName'];
+      if (this.tokens[key]['address'] === this.tokenAddress) {
+        console.log('DEPOSIT/WITHDRAW ' + this.tokens[key]['market']);
+        this.token = this.tokens[key]['market'];
+        this.tokenName = this.tokens[key]['tokenName'];
       }
     }
     if (this.rawLog._eventName == 'Deposit') {

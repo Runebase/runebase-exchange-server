@@ -468,6 +468,8 @@ module.exports = {
         token,
         amount,
       } = data;
+      const markets = await db.Markets.find({});
+
       const MetaData = getContractMetadata();
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
@@ -486,17 +488,17 @@ module.exports = {
           throw err;
         }
       }
-      for(key in MetaData['Tokens']){
-        if (token == MetaData['Tokens'][key]['Pair']) {
+      for(key in markets){
+        if (token == markets[key]['market']) {
           try {
             sentTx = await Token.transfer({
               to: receiverAddress,
               value: amount,
               senderAddress,
-              token: MetaData['Tokens'][key]['Pair'],
-              tokenAddress: MetaData['Tokens'][key]['Address'],
-              abi: MetaData['Tokens'][key]['Abi'],
-              RrcVersion: MetaData['Tokens'][key]['Rrc'],
+              token: markets[key]['market'],
+              tokenAddress: markets[key]['address'],
+              abi: MetaData['TokenAbi'][markets[key]['abi']],
+              RrcVersion: markets[key]['abi'],
             });
             txid = sentTx.txid;
           } catch (err) {
@@ -533,6 +535,7 @@ module.exports = {
         token,
         amount,
       } = data;
+      const markets = await db.Markets.find({});
       const MetaData = await getContractMetadata();
       const exchangeAddress = await getInstance().fromHexAddress(MetaData['Exchange']['Address']);
       const version = Config.CONTRACT_VERSION_NUM;
@@ -552,17 +555,17 @@ module.exports = {
           throw err;
         }
       }
-      for(key in MetaData['Tokens']){
-        if (token == MetaData['Tokens'][key]['Pair']) {
+      for(key in markets){
+        if (token == markets[key]['market']) {
           try {
             sentTx = await Token.transfer({
               to: exchangeAddress,
               value: amount,
               senderAddress,
-              token: MetaData['Tokens'][key]['Pair'],
-              tokenAddress: MetaData['Tokens'][key]['Address'],
-              abi: MetaData['Tokens'][key]['Abi'],
-              RrcVersion: MetaData['Tokens'][key]['Rrc'],
+              token: markets[key]['market'],
+              tokenAddress: markets[key]['address'],
+              abi: MetaData['TokenAbi'][markets[key]['abi']],
+              RrcVersion: markets[key]['abi'],
             });
             txid = sentTx.txid;
           } catch (err) {
@@ -606,6 +609,7 @@ module.exports = {
         token,
         amount,
       } = data;
+      const markets = await db.Markets.find({});
       let MetaData = await getContractMetadata();
       const exchangeAddress = await getInstance().fromHexAddress(MetaData['Exchange']['Address']);
       const version = Config.CONTRACT_VERSION_NUM;
@@ -629,15 +633,15 @@ module.exports = {
           throw err;
         }
       }
-      for(redeemExchangeToken in MetaData['Tokens']){
-        if (token == MetaData['Tokens'][redeemExchangeToken]['Pair']) {
+      for(redeemExchangeToken in markets){
+        if (token == markets[redeemExchangeToken]['market']) {
           try {
             //tokenaddress = metaData.Tokens.PredictionToken.address;
             txid = await exchange.redeemExchange({
               exchangeAddress: MetaData['Exchange']['Address'],
               amount,
               token,
-              tokenaddress: MetaData['Tokens'][redeemExchangeToken]['Address'],
+              tokenaddress: markets[redeemExchangeToken]['address'],
               senderAddress,
               abi: MetaData['Exchange']['Abi'],
             });
@@ -683,6 +687,7 @@ module.exports = {
         price,
         orderType,
       } = data;
+      const markets = await db.Markets.find({});
       const MetaData = await getContractMetadata();
       const exchangeAddress = await getInstance().fromHexAddress(MetaData['Exchange']['Address']);
       const version = Config.CONTRACT_VERSION_NUM;
@@ -692,10 +697,11 @@ module.exports = {
       const priceFract = math.fraction(price);
       const priceFractN = priceFract.n;
       const priceFractD = priceFract.d;
-      for (TokenName in MetaData['Tokens']) {
-        if (token == MetaData['Tokens'][TokenName]['Pair']) {
+
+      for (TokenName in markets) {
+        if (token == markets[TokenName]['market']) {
           try {
-            tokenaddress = MetaData['Tokens'][TokenName]['Address'];
+            tokenaddress = markets[TokenName]['address'];
           } catch (err) {
             getLogger().error(`Error calling MetaData['Tokens'][${TokenName}]['Address']: ${err.message}`);
             throw err;

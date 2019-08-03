@@ -20,6 +20,7 @@ const Trade = require('../models/trade');
 const MarketMaker = require('../models/marketMaker');
 const FundRedeem = require('../models/fundRedeem');
 const OrderFulfilled = require('../models/orderFulfilled');
+const Market = require('../models/market');
 const Token = require('../api/token');
 const wallet = require('../api/wallet');
 const network = require('../api/network');
@@ -115,6 +116,15 @@ async function sync(db) {
 
       const endBlock = Math.min((startBlock + BLOCK_BATCH_SIZE) - 1, currentBlockCount);
 
+      await syncTokenListingCreated(db, startBlock, endBlock, removeHexPrefix);
+      getLogger().debug('Synced syncTokenListingCreated');
+
+      await syncTokenListingUpdated(db, startBlock, endBlock, removeHexPrefix);
+      getLogger().debug('Synced syncTokenListingUpdated');
+
+      await syncTokenListingDeleted(db, startBlock, endBlock, removeHexPrefix);
+      getLogger().debug('Synced syncTokenListingDeleted');
+
       await syncFundRedeem(db, startBlock, endBlock, removeHexPrefix);
       getLogger().debug('Synced FundRedeem');
 
@@ -161,6 +171,212 @@ async function sync(db) {
   );
 }
 
+async function syncTokenListingCreated(db, startBlock, endBlock, removeHexPrefix) {
+  const blockchainDataPath = Utils.getDataDir();
+  let result;
+  const ListingCreatedPromises = [];
+  try {
+    result = await getInstance().searchLogs(
+      startBlock, endBlock, MetaData['Registery']['Address'],
+      [MetaData['Registery']['ListingCreated']], MetaData, removeHexPrefix,
+    );
+    getLogger().debug('searchlog ListingCreated');
+  } catch (err) {
+    getLogger().error(`ERROR: ${err.message}`);
+    return;
+  }
+  getLogger().debug(`${startBlock} - ${endBlock}: Retrieved ${result.length} entries from ListingCreated`);
+
+  _.forEach(result, (event, index) => {
+    const blockNum = event.blockNumber;
+    const txid = event.transactionHash;
+    _.forEachRight(event.log, (rawLog) => {
+      let topics = rawLog.topics.map(i => '0x' + i );
+      const data = '0x' + rawLog.data;
+      const OutputBytecode = abi.decodeEvent(MetaData['Registery']['Abi'][7], data, topics);
+
+      if (OutputBytecode._eventName === 'ListingCreated') {
+        const insertListingCreated= new Promise(async (resolve) => {
+          try {
+            const market = new Market(OutputBytecode).translate();
+            const marketAddress = market.address;
+
+            if (await DBHelper.getCount(db.Markets, { address: marketAddress }) > 0) {
+              const getMarket = await DBHelper.findOne(db.Markets, { address: marketAddress });
+              /// Rename Chart File
+              const oldSrc = blockchainDataPath + '/' + getMarket.market + '.tsv';
+              const newSrc = blockchainDataPath + '/' + market.market + '.tsv';
+              if (oldSrc !== newSrc) {
+                fs.rename(oldSrc, newSrc, function (err) {
+                  if (err) throw err;
+                });
+              }
+              await DBHelper.updateMarketByQuery(db.Markets, { address: marketAddress }, market);
+              ///
+            } else {
+              db.Markets.insert(market).then((value)=>{
+                /// init Chart File
+                const addMarket = market.market;
+                const dataSrc = blockchainDataPath + '/' + addMarket + '.tsv';
+                if (!fs.existsSync(dataSrc)){
+                  fs.writeFile(dataSrc, 'date\topen\thigh\tlow\tclose\tvolume\n2018-01-01\t0\t0\t0\t0\t0\n2018-01-02\t0\t0\t0\t0\t0\n', { flag: 'w' }, function(err) {
+                    if (err)
+                      return console.error(err);
+                  });
+                }
+                fs.closeSync(fs.openSync(dataSrc, 'a'));
+                ///
+              });
+
+            }
+            await DBHelper.changeMarketByQuery(db.NewOrder, { sellToken: marketAddress }, market);
+            await DBHelper.changeMarketByQuery(db.NewOrder, { buyToken: marketAddress }, market);
+            await DBHelper.changeMarketByQuery(db.OrderFulfilled, { sellToken: marketAddress }, market);
+            await DBHelper.changeMarketByQuery(db.OrderFulfilled, { buyToken: marketAddress }, market);
+            await DBHelper.changeMarketByQuery(db.Trade, { tokenAddress: marketAddress }, market);
+            await DBHelper.changeMarketByQuery(db.Trade, { tokenAddress: marketAddress }, market);
+            await DBHelper.changeMarketByQuery(db.FundRedeem, { tokenAddress: marketAddress }, market);
+            resolve();
+          } catch (err) {
+            getLogger().error(`ERROR: ${err.message}`);
+          }
+        });
+        ListingCreatedPromises.push(insertListingCreated);
+      }
+    });
+  });
+  await Promise.all(ListingCreatedPromises);
+}
+
+async function syncTokenListingUpdated(db, startBlock, endBlock, removeHexPrefix) {
+  const blockchainDataPath = Utils.getDataDir();
+  let result;
+  const ListingUpdatedPromises = [];
+  try {
+    result = await getInstance().searchLogs(
+      startBlock, endBlock, MetaData['Registery']['Address'],
+      [MetaData['Registery']['ListingUpdated']], MetaData, removeHexPrefix,
+    );
+    getLogger().debug('searchlog ListingUpdated');
+  } catch (err) {
+    getLogger().error(`ERROR: ${err.message}`);
+    return;
+  }
+  getLogger().debug(`${startBlock} - ${endBlock}: Retrieved ${result.length} entries from ListingUpdated`);
+
+  _.forEach(result, (event, index) => {
+    const blockNum = event.blockNumber;
+    const txid = event.transactionHash;
+    _.forEachRight(event.log, (rawLog) => {
+      let topics = rawLog.topics.map(i => '0x' + i );
+      const data = '0x' + rawLog.data;
+      const OutputBytecode = abi.decodeEvent(MetaData['Registery']['Abi'][8], data, topics);
+
+      if (OutputBytecode._eventName === 'ListingUpdated') {
+        const insertListingUpdated= new Promise(async (resolve) => {
+          try {
+            const market = new Market(OutputBytecode).translate();
+            const marketAddress = market.address;
+
+            if (await DBHelper.getCount(db.Markets, { address: marketAddress }) > 0) {
+              const getMarket = await DBHelper.findOne(db.Markets, { address: marketAddress });
+              /// Rename Chart File
+              const oldSrc = blockchainDataPath + '/' + getMarket.market + '.tsv';
+              const newSrc = blockchainDataPath + '/' + market.market + '.tsv';
+              if (oldSrc !== newSrc) {
+                fs.rename(oldSrc, newSrc, function (err) {
+                  if (err) throw err;
+                });
+              }
+              await DBHelper.updateMarketByQuery(db.Markets, { address: marketAddress }, market);
+              ///
+            } else {
+              db.Markets.insert(market).then((value)=>{
+                /// init Chart File
+                const addMarket = market.market;
+                const dataSrc = blockchainDataPath + '/' + addMarket + '.tsv';
+                if (!fs.existsSync(dataSrc)){
+                  fs.writeFile(dataSrc, 'date\topen\thigh\tlow\tclose\tvolume\n2018-01-01\t0\t0\t0\t0\t0\n2018-01-02\t0\t0\t0\t0\t0\n', { flag: 'w' }, function(err) {
+                    if (err)
+                      return console.error(err);
+                  });
+                }
+                fs.closeSync(fs.openSync(dataSrc, 'a'));
+                ///
+              });
+
+            }
+            await DBHelper.changeMarketByQuery(db.NewOrder, { sellToken: marketAddress }, market);
+            await DBHelper.changeMarketByQuery(db.NewOrder, { buyToken: marketAddress }, market);
+            await DBHelper.changeMarketByQuery(db.OrderFulfilled, { sellToken: marketAddress }, market);
+            await DBHelper.changeMarketByQuery(db.OrderFulfilled, { buyToken: marketAddress }, market);
+            await DBHelper.changeMarketByQuery(db.Trade, { tokenAddress: marketAddress }, market);
+            await DBHelper.changeMarketByQuery(db.Trade, { tokenAddress: marketAddress }, market);
+            await DBHelper.changeMarketByQuery(db.FundRedeem, { tokenAddress: marketAddress }, market);
+            resolve();
+          } catch (err) {
+            getLogger().error(`ERROR: ${err.message}`);
+          }
+        });
+        ListingUpdatedPromises.push(insertListingUpdated);
+      }
+    });
+  });
+  await Promise.all(ListingUpdatedPromises);
+}
+
+async function syncTokenListingDeleted(db, startBlock, endBlock, removeHexPrefix) {
+  const blockchainDataPath = Utils.getDataDir();
+  let result;
+  const ListingUpdatedPromises = [];
+  try {
+    result = await getInstance().searchLogs(
+      startBlock, endBlock, MetaData['Registery']['Address'],
+      [MetaData['Registery']['ListingDeleted']], MetaData, removeHexPrefix,
+    );
+    getLogger().debug('searchlog ListingDeleted');
+  } catch (err) {
+    getLogger().error(`ERROR: ${err.message}`);
+    return;
+  }
+  getLogger().debug(`${startBlock} - ${endBlock}: Retrieved ${result.length} entries from ListingDeleted`);
+
+  _.forEach(result, (event, index) => {
+    const blockNum = event.blockNumber;
+    const txid = event.transactionHash;
+    _.forEachRight(event.log, (rawLog) => {
+      let topics = rawLog.topics.map(i => '0x' + i );
+      const data = '0x' + rawLog.data;
+      const OutputBytecode = abi.decodeEvent(MetaData['Registery']['Abi'][9], data, topics);
+
+      if (OutputBytecode._eventName === 'ListingDeleted') {
+        const insertListingUpdated= new Promise(async (resolve) => {
+          try {
+            const market = {
+              token: 'Unregistered',
+              tokenName: 'Unregistered Token',
+            };
+            const marketAddress = OutputBytecode._address;
+
+            await DBHelper.removeOrdersByQuery(db.Markets, { address: marketAddress});
+            await DBHelper.changeMarketByQuery(db.NewOrder, { sellToken: marketAddress }, market);
+            await DBHelper.changeMarketByQuery(db.NewOrder, { buyToken: marketAddress }, market);
+            await DBHelper.changeMarketByQuery(db.OrderFulfilled, { sellToken: marketAddress }, market);
+            await DBHelper.changeMarketByQuery(db.OrderFulfilled, { buyToken: marketAddress }, market);
+            await DBHelper.changeMarketByQuery(db.Trade, { tokenAddress: marketAddress }, market);
+            await DBHelper.changeMarketByQuery(db.Trade, { tokenAddress: marketAddress }, market);
+            await DBHelper.changeMarketByQuery(db.FundRedeem, { tokenAddress: marketAddress }, market);
+            resolve();
+          } catch (err) {
+            getLogger().error(`ERROR: ${err.message}`);
+          }
+        });
+        ListingUpdatedPromises.push(insertListingUpdated);
+      }
+    });
+  });
+  await Promise.all(ListingUpdatedPromises);
+}
 
 // Gets all promises for new blocks to insert
 async function getInsertBlockPromises(db, startBlock, endBlock) {
@@ -269,16 +485,17 @@ async function getAddressBalances() {
     sequentialLoop(addressBatches.length, async (loop) => {
       const BalancePromises = [];
       const StringPromises = [];
+      const markets = await db.Markets.find({});
 
       _.map(addressBatches[loop.iteration()], async (address) => {
         const ExchangeTokenPromise = new Promise(async (ExchangeTokenResolver) => {
           let ExchangeTokenCounter = 0;
-          async.forEach(MetaData['Tokens'], async function(ExchangeToken, callback) {
+          async.forEach(markets, async function(ExchangeToken, callback) {
             try {
               let Balance = new BigNumber(0);
               const hex = await getInstance().getHexAddress(address);
               const resp = await exchange.balanceOf({
-                token: ExchangeToken['Address'],
+                token: ExchangeToken['address'],
                 user: hex,
                 senderAddress: address,
                 exchangeAddress: MetaData['Exchange']['Address'],
@@ -286,11 +503,11 @@ async function getAddressBalances() {
               });
               Balance = Utils.hexToDecimalString(resp.executionResult.formattedOutput[0]);
               const found = await _.find(addressObjs, { address });
-              const lowerPair = 'exchange' + ExchangeToken['Pair'].toLowerCase();
-              found['Exchange'][ExchangeToken['Pair']] = await Balance.toString(10);
+              const lowerPair = 'exchange' + ExchangeToken['market'].toLowerCase();
+              found['Exchange'][ExchangeToken['market']] = await Balance.toString(10);
               found[lowerPair] = await Balance.toString(10);
               ExchangeTokenCounter++;
-              if (ExchangeTokenCounter == Object.keys(MetaData['Tokens']).length) {
+              if (ExchangeTokenCounter == Object.keys(markets).length) {
                 getLogger().debug('Exchange Token Parent Done');
                 ExchangeTokenResolver();
               }
@@ -302,25 +519,25 @@ async function getAddressBalances() {
 
         const WalletTokenPromise = new Promise(async (WalletTokenResolve) => {
           let WalletTokenCounter = 0;
-          async.forEach(MetaData['Tokens'], async function(WalletToken, callback) {
+          async.forEach(markets, async function(WalletToken, callback) {
             try {
+              const myAbi = MetaData['TokenAbi'][WalletToken.abi]
               let Balance = await new BigNumber(0);
               const resp = await Token.balanceOf({
                 owner: address,
                 senderAddress: address,
-                token: WalletToken['Pair'],
-                tokenAddress: WalletToken['Address'],
-                abi: WalletToken['Abi'],
-                RrcVersion: WalletToken['Rrc'],
+                token: WalletToken['market'],
+                tokenAddress: WalletToken['address'],
+                abi: myAbi,
               });
               Balance = resp.balance;
               const found = await _.find(addressObjs, { address });
-              const lowerPair = WalletToken['Pair'].toLowerCase();
+              const lowerPair = WalletToken['market'].toLowerCase();
               console.log(new BigNumber(Balance).dividedBy(SATOSHI_CONVERSION).toString(10));
-              found['Wallet'][WalletToken['Pair']] = new BigNumber(Balance).dividedBy(SATOSHI_CONVERSION).toString(10);
+              found['Wallet'][WalletToken['market']] = new BigNumber(Balance).dividedBy(SATOSHI_CONVERSION).toString(10);
               found[lowerPair] = new BigNumber(Balance).dividedBy(SATOSHI_CONVERSION).toString(10);
               WalletTokenCounter++;
-              if (WalletTokenCounter == Object.keys(MetaData['Tokens']).length) {
+              if (WalletTokenCounter == Object.keys(markets).length) {
                 getLogger().debug('Wallet Token Parent Done');
                 WalletTokenResolve();
               }
@@ -362,7 +579,7 @@ async function getAddressBalances() {
       await Promise.all(BalancePromises);
       _.map(addressBatches[loop.iteration()], async (address) => {
           const StringPromise = new Promise(async (StringResolve) => {
-            async.forEach(MetaData['Tokens'], async (ExchangeToken, callback) => {
+            async.forEach(markets, async (ExchangeToken, callback) => {
               try {
               const found = await _.find(addressObjs, { address });
               found.balance = JSON.stringify(found);
@@ -394,7 +611,6 @@ async function getAddressBalances() {
     try {
       try {
         address = await wallet.getAddressesByLabel('default');
-        console.log(address);
       } catch (err) {
         if (err.response.status == 500) {
           try {
@@ -447,6 +663,7 @@ async function getAddressBalances() {
 async function syncNewOrder(db, startBlock, endBlock, removeHexPrefix) {
   let result;
   const createNewOrderPromises = [];
+  const markets = await db.Markets.find({});
   try {
     result = await getInstance().searchLogs(
       startBlock, endBlock, MetaData['Exchange']['Address'],
@@ -467,18 +684,14 @@ async function syncNewOrder(db, startBlock, endBlock, removeHexPrefix) {
       const topics = rawLog.topics.map(i => '0x' + i );
       const data = '0x' + rawLog.data;
       const OutputBytecode = abi.decodeEvent(MetaData['Exchange']['Abi'][16], data, topics);
-      console.log('OutputBytecode');
-      console.log(OutputBytecode);
 
       if (OutputBytecode._eventName === 'NewOrder' && parseInt(OutputBytecode._time.toString(10)) !== 0) {
         const insertNewOrderDB = new Promise(async (resolve) => {
           try {
-            const newOrder = await new NewOrder(blockNum, txid, OutputBytecode, MetaData['Tokens'], MetaData['BaseCurrency']['Address']).translate();
+            const newOrder = await new NewOrder(blockNum, txid, OutputBytecode, markets, MetaData['BaseCurrency']['Address']).translate();
             if (await DBHelper.getCount(db.NewOrder, { txid }) > 0) {
               DBHelper.updateOrderByQuery(db.NewOrder, { txid }, newOrder);
             } else {
-              console.log('inserting Order');
-              console.log(newOrder);
               DBHelper.insertTopic(db.NewOrder, newOrder);
             }
             resolve();
@@ -520,8 +733,6 @@ async function syncOrderCancelled(db, startBlock, endBlock, removeHexPrefix) {
       const OutputBytecode = abi.decodeEvent(MetaData['Exchange']['Abi'][17],
       data,
       topics);
-      console.log('OutputBytecode');
-      console.log(OutputBytecode);
       if (OutputBytecode._eventName === 'OrderCancelled') {
         const removeNewOrderDB = new Promise(async (resolve) => {
           try {
@@ -567,8 +778,6 @@ async function syncOrderFulfilled(db, startBlock, endBlock, removeHexPrefix) {
       const OutputBytecode = abi.decodeEvent(MetaData['Exchange']['Abi'][18],
       data,
       topics);
-      console.log('OutputBytecode');
-      console.log(OutputBytecode);
       if (OutputBytecode._eventName === 'OrderFulfilled') {
         const fulfillOrderDB = new Promise(async (resolve) => {
           try {
@@ -623,12 +832,8 @@ async function addTrade(rawLog, blockNum, txid){
     if (await DBHelper.getCount(db.Trade, { txid }) > 0) {
       await DBHelper.updateTradeByQuery(db.Trade, { txid }, trade);
     } else {
-      console.log('trade');
-      console.log(trade);
       await DBHelper.insertTopic(db.Trade, trade)
     }
-    console.log('updateOrder');
-    console.log(updateOrder);
     await DBHelper.updateTradeOrderByQuery(db.NewOrder, { orderId }, updateOrder);
     getLogger().debug('Trade Inserted');
     return trade;
@@ -677,9 +882,6 @@ async function syncTrade(db, startBlock, endBlock, removeHexPrefix) {
       data = '0x' + rawLog.data;
       topics = await topicFiller(topics);
       let OutputBytecode = await abi.decodeEvent(MetaData['Exchange']['Abi'][20], data, topics);
-
-      console.log('OutputBytecode');
-      console.log(OutputBytecode);
 
       if (OutputBytecode._eventName === 'Trade' && parseInt(OutputBytecode._time.toString(10)) !== 0) {
         const trade = await addTrade(OutputBytecode, blockNum, txid).then(trade => new Promise(async (resolve) => {
@@ -782,11 +984,12 @@ async function syncMarkets(db, startBlock, endBlock, removeHexPrefix) {
   const createMarketPromises = [];
   const marketDB = new Promise(async (resolve) => {
     try {
+      const markets = await db.Markets.find({});
       let change = 0;
       let volume = 0;
       let filled = 0;
       let minSellPrice = 0;
-      for (var key in MetaData['Tokens']){
+      for (var key in markets){
             change = 0;
             volume = 0;
             filled = 0;
@@ -798,7 +1001,7 @@ async function syncMarkets(db, startBlock, endBlock, removeHexPrefix) {
                       {
                         $and: [
                         { 'date': { $gt: new Date(inputDate) } },
-                        { token: MetaData['Tokens'][key]['Pair'] },
+                        { token: markets[key]['market'] },
                         ]
                       },
                     ['time', 'tokenName', 'date', 'price', 'amount', 'orderType', 'boughtTokens', 'soldTokens'],
@@ -825,7 +1028,7 @@ async function syncMarkets(db, startBlock, endBlock, removeHexPrefix) {
                     db.NewOrder,
                       {
                         $and: [
-                        { token: MetaData['Tokens'][key]['Pair'] },
+                        { token: markets[key]['market'] },
                         { status: orderState.ACTIVE },
                         { orderType: 'SELLORDER' },
                         ]
@@ -839,13 +1042,13 @@ async function syncMarkets(db, startBlock, endBlock, removeHexPrefix) {
               minSellPrice = 0;
             }
             const obj = {
-              market: MetaData['Tokens'][key]['Pair'],
+              market: markets[key]['market'],
               change: change.toFixed(2),
               volume,
-              tokenName: MetaData['Tokens'][key]['TokenName'],
+              tokenName: markets[key]['tokenName'],
               price: minSellPrice,
-              address: MetaData['Tokens'][key]['Address'],
-              abi: MetaData['Tokens'][key]['Abi'],
+              address: markets[key]['address'],
+              abi: markets[key]['abi'],
             }
             await DBHelper.updateMarketsByQuery(db.Markets, { market: obj.market }, obj);
       };
@@ -891,29 +1094,25 @@ async function syncFundRedeem(db, startBlock, endBlock, removeHexPrefix) {
 
   const createFundPromises = [];
   const createRedeemPromises = [];
+  const markets = await db.Markets.find({});
 
   _.forEach(resultFund, (event, index) => {
     const blockNum = event.blockNumber;
     const txid = event.transactionHash;
     _.forEachRight(event.log, (rawLog) => {
-
       const topics = rawLog.topics.map(i => '0x' + i );
       const data = '0x' + rawLog.data;
-      console.log(MetaData['Exchange']['Abi'][14]);
       const OutputBytecode = abi.decodeEvent(MetaData['Exchange']['Abi'][14],
       data,
       topics);
-      console.log('OutputBytecode');
-      console.log(OutputBytecode);
 
-      if (OutputBytecode._eventName === 'Deposit') {
+      if (OutputBytecode._eventName === 'Deposit' && parseInt(OutputBytecode._time.toString(10)) !== 64) {
         const fundDB = new Promise(async (resolve) => {
           try {
-            const fund = new FundRedeem(blockNum, txid, OutputBytecode, MetaData['Tokens'], MetaData['BaseCurrency']).translate();
+            const fund = new FundRedeem(blockNum, txid, OutputBytecode, markets, MetaData['BaseCurrency']).translate();
             if (await DBHelper.getCount(db.FundRedeem, { txid }) > 0) {
               await DBHelper.updateFundRedeemByQuery(db.FundRedeem, { txid }, fund);
             } else {
-              console.log(fund);
               await DBHelper.insertTopic(db.FundRedeem, fund)
             }
             resolve();
@@ -936,16 +1135,13 @@ async function syncFundRedeem(db, startBlock, endBlock, removeHexPrefix) {
       const OutputBytecode = abi.decodeEvent(MetaData['Exchange']['Abi'][15],
       data,
       topics);
-      console.log('OutputBytecode');
-      console.log(OutputBytecode);
-      if (OutputBytecode._eventName === 'Withdrawal') {
+      if (OutputBytecode._eventName === 'Withdrawal' && parseInt(OutputBytecode._time.toString(10)) !== 64) {
         const redeemDB = new Promise(async (resolve) => {
           try {
-            const redeem = new FundRedeem(blockNum, txid, OutputBytecode, MetaData['Tokens'], MetaData['BaseCurrency']).translate();
+            const redeem = new FundRedeem(blockNum, txid, OutputBytecode, markets, MetaData['BaseCurrency']).translate();
             if (await DBHelper.getCount(db.FundRedeem, { txid }) > 0) {
               await DBHelper.updateFundRedeemByQuery(db.FundRedeem, { txid }, redeem);
             } else {
-              console.log(redeem);
               await DBHelper.insertTopic(db.FundRedeem, redeem)
             }
             resolve();

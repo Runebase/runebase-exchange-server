@@ -1,0 +1,7 @@
+d5ab9265: Listings(address)
+c24d753a: addListing(address,string,string,string,uint8,uint8)
+df4c8ff9: deleteListing(address)
+084af0b2: getListing(address)
+8da5cb5b: owner()
+f2fde38b: transferOwnership(address)
+e284ed00: updateListing(address,string,string,string,uint8,uint8)
