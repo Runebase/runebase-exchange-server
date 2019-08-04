@@ -466,7 +466,6 @@ async function getAddressBalances() {
       _.each(grouping, (addressArrItem) => {
         addressObjs.push({
           address: addressArrItem[0],
-          RUNES: new BigNumber(addressArrItem[1]).multipliedBy(SATOSHI_CONVERSION).toString(10),
           runebase: new BigNumber(addressArrItem[1]).multipliedBy(SATOSHI_CONVERSION).toString(10),
           Wallet: {
             RUNES: new BigNumber(addressArrItem[1]).toString(10),
@@ -503,7 +502,6 @@ async function getAddressBalances() {
               });
               Balance = await Utils.hexToDecimalString(resp.executionResult.formattedOutput[0]);
               const found = _.find(addressObjs, { address });
-              found.exchangerunes = Balance.toString(10);
               found['Exchange'][MetaData['BaseCurrency']['Pair']] = Balance.toString(10);
               ExchangeBaseResolve();
             } catch (err) {
@@ -530,9 +528,7 @@ async function getAddressBalances() {
               });
               Balance = Utils.hexToDecimalString(resp.executionResult.formattedOutput[0]);
               const found = _.find(addressObjs, { address });
-              const lowerPair = 'exchange' + ExchangeToken['market'].toLowerCase();
               found['Exchange'][ExchangeToken['market']] = await new BigNumber(Balance).dividedBy(SATOSHI_CONVERSION).toString(10);
-              found[lowerPair] = Balance.toString(10);
               ExchangeTokenCounter++;
               if (ExchangeTokenCounter == Object.keys(markets).length) {
                 getLogger().debug('Exchange Token Parent Done');
@@ -563,10 +559,7 @@ async function getAddressBalances() {
               });
               Balance = resp.balance;
               const found = _.find(addressObjs, { address });
-              const lowerPair = WalletToken['market'].toLowerCase();
-              console.log(new BigNumber(Balance).dividedBy(SATOSHI_CONVERSION).toString(10));
               found['Wallet'][WalletToken['market']] = new BigNumber(Balance).dividedBy(SATOSHI_CONVERSION).toString(10);
-              found[lowerPair] = new BigNumber(Balance).dividedBy(SATOSHI_CONVERSION).toString(10);
               WalletTokenCounter++;
               if (WalletTokenCounter == Object.keys(markets).length) {
                 getLogger().debug('Wallet Token Parent Done');
@@ -631,16 +624,6 @@ async function getAddressBalances() {
       address = Object.keys(address)[0];
 
       emptyObject['address'] = Object.keys(address)[0];
-      for (EmptyTokenNames in MetaData['Tokens']) {
-        lowerCasePair = MetaData['Tokens'][EmptyTokenNames]['Pair'].toLowerCase();
-        exchangeLowerCasePair = 'exchange' + lowerCasePair;
-        emptyObject[lowerCasePair] = '0';
-        emptyObject[exchangeLowerCasePair] = '0';
-      }
-      emptyObject[MetaData['BaseCurrency']['Pair']] = '0';
-      emptyObject['exchangerunes'] = '0';
-
-      /////
       emptyObject['Wallet'] = {};
       emptyObject['Exchange'] = {};
       emptyObject['address'] = address;

@@ -542,12 +542,6 @@ input Order {
 
 type AddressBalance {
   address: String!,
-  RUNES: String!,
-  pred: String!,
-  fun: String!,
-  exchangerunes: String!,
-  exchangepred: String!,
-  exchangefun: String!,
   balance: String!
 }
 
