@@ -53,6 +53,7 @@ const Transaction = {
     //if (txType.startsWith('APPROVE')) {
     //  costsArr.push(getApproveObj(token, amount));
     //}
+    const newAmount = await Utils.ConvertTokenDecimalToNormal(db, amount, token);
 
     switch (txType) {
       case 'TRANSFER': {
@@ -61,7 +62,7 @@ const Transaction = {
           gasLimit: Config.DEFAULT_GAS_LIMIT,
           gasCost: DEFAULT_GAS_COST,
           token,
-          amount,
+          amount: newAmount,
         });
         break;
       }
@@ -71,7 +72,7 @@ const Transaction = {
           gasLimit: Config.DEFAULT_GAS_LIMIT,
           gasCost: DEFAULT_GAS_COST,
           token,
-          amount,
+          amount: newAmount,
         });
         break;
       }
@@ -81,7 +82,7 @@ const Transaction = {
           gasLimit: Config.DEFAULT_GAS_LIMIT,
           gasCost: DEFAULT_GAS_COST,
           token,
-          amount,
+          amount: newAmount,
         });
         break;
       }
@@ -91,7 +92,7 @@ const Transaction = {
           gasLimit: Config.DEFAULT_GAS_LIMIT,
           gasCost: DEFAULT_GAS_COST,
           token,
-          amount,
+          amount: newAmount,
         });
         break;
       }
@@ -101,7 +102,7 @@ const Transaction = {
           gasLimit: Config.DEFAULT_GAS_LIMIT,
           gasCost: DEFAULT_GAS_COST,
           token,
-          amount,
+          amount: newAmount,
         });
         break;
       }
@@ -111,7 +112,7 @@ const Transaction = {
           gasLimit: Config.DEFAULT_GAS_LIMIT,
           gasCost: DEFAULT_GAS_COST,
           token,
-          amount,
+          amount: newAmount,
         });
         break;
       }
@@ -121,7 +122,7 @@ const Transaction = {
           gasLimit: Config.DEFAULT_GAS_LIMIT,
           gasCost: DEFAULT_GAS_COST,
           token,
-          amount,
+          amount: newAmount,
         });
         break;
       }
@@ -129,7 +130,6 @@ const Transaction = {
         throw new Error(`Invalid transactionType: ${transactionType}`);
       }
     }
-
     return costsArr;
   },
 };

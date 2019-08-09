@@ -1,10 +1,26 @@
 const fs = require('fs-extra');
 const _ = require('lodash');
 const Web3Utils = require('web3-utils');
+const BigNumber = require('bignumber.js');
 
 const { Config, isMainnet } = require('../config');
 const { version } = require('../../package.json');
 const { getLogger } = require('./logger');
+
+/*
+* Token Satoshi To Normal
+*/
+async function ConvertTokenDecimalToNormal(db, amount, token) {
+  const markets = await db.Markets.find({});
+
+  for await (const market of markets) {
+    if (market.market == token) {
+      const conversionBN = new BigNumber(Number('1e' + market.decimals));
+      return new BigNumber(amount).dividedBy(conversionBN).toString(10);
+    }
+  }
+  return amount;
+}
 
 /*
 * Checks for dev flag
@@ -170,6 +186,7 @@ async function isAllowanceEnough(owner, spender, amount) {
 }
 
 module.exports = {
+  ConvertTokenDecimalToNormal,
   isDevEnv,
   getBaseDataDir,
   getLocalCacheDataDir,

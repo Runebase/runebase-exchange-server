@@ -584,6 +584,7 @@ enum _TransactionStatus {
    PENDING
    FAIL
    SUCCESS
+   CONFIRMED
    PENDINGCANCEL
 }
 `;

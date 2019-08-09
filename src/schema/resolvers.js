@@ -470,7 +470,7 @@ module.exports = {
       } = data;
       const markets = await db.Markets.find({});
 
-      const MetaData = getContractMetadata();
+      const MetaData = await getContractMetadata();
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
       let sentTx;

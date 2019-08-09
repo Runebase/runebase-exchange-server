@@ -502,7 +502,7 @@ async function getAddressBalances() {
               });
               Balance = await Utils.hexToDecimalString(resp.executionResult.formattedOutput[0]);
               const found = _.find(addressObjs, { address });
-              found['Exchange'][MetaData['BaseCurrency']['Pair']] = Balance.toString(10);
+              found['Exchange'][MetaData['BaseCurrency']['Pair']] = await new BigNumber(Balance).dividedBy(SATOSHI_CONVERSION).toString(10);
               ExchangeBaseResolve();
             } catch (err) {
               getLogger().error(`BalanceOf ${address}: ${err.message}`);
