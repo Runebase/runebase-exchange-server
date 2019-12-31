@@ -4,11 +4,11 @@
 1. Node 10 installed
 2. You will need the Runebase client for the OS you are testing on (or building against). Download the [Runebase client](https://github.com/runebase/runebase/releases) for the correct OS and put the `bin/` folder in the corresponding dir:
 
-        runebase-exchange-server/runebase/mac/bin         runebase-0.17.1-osx64.tar.gz
-        runebase-exchange-server/runebase/win64/bin       runebase-0.17.1-win64.zip
-        runebase-exchange-server/runebase/win32/bin       runebase-0.17.1-win32.zip
-        runebase-exchange-server/runebase/linux64/bin     runebase-0.17.1-x86_64-linux-gnu.tar.gz
-        runebase-exchange-server/runebase/linux32/bin     runebase-0.17.1-i686-pc-linux-gnu.tar.gz
+        runebase-exchange-server/runebase/mac/bin         runebase-0.18.2-osx64.tar.gz
+        runebase-exchange-server/runebase/win64/bin       runebase-0.18.2-win64.zip
+        runebase-exchange-server/runebase/win32/bin       runebase-0.18.2-win32.zip
+        runebase-exchange-server/runebase/linux64/bin     runebase-0.18.2-x86_64-linux-gnu.tar.gz
+        runebase-exchange-server/runebase/linux32/bin     runebase-0.18.2-i686-pc-linux-gnu.tar.gz
 
 # Install
 1. `git clone https://github.com/runebase/runebase-exchange-server.git`
