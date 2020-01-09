@@ -449,7 +449,6 @@ module.exports = {
       }
       const peerNodeCount = await network.getPeerNodeCount();
       addressBalances.balance = JSON.stringify(addressBalances.balance);
-
       return {
         syncBlockNum,
         syncBlockTime,
@@ -886,6 +885,36 @@ module.exports = {
   Subscription: {
     onSyncInfo: {
       subscribe: () => pubsub.asyncIterator('onSyncInfo'),
+    },
+    onMyTradeInfo: {
+      subscribe: () => pubsub.asyncIterator('onMyTradeInfo'),
+    },
+    onSelectedOrderInfo: {
+      subscribe: () => pubsub.asyncIterator('onSelectedOrderInfo'),
+    },
+    onActiveOrderInfo: {
+      subscribe: () => pubsub.asyncIterator('onActiveOrderInfo'),
+    },
+    onFulfilledOrderInfo: {
+      subscribe: () => pubsub.asyncIterator('onFulfilledOrderInfo'),
+    },
+    onCanceledOrderInfo: {
+      subscribe: () => pubsub.asyncIterator('onCanceledOrderInfo'),
+    },
+    onBuyHistoryInfo: {
+      subscribe: () => pubsub.asyncIterator('onBuyHistoryInfo'),
+    },
+    onSellHistoryInfo: {
+      subscribe: () => pubsub.asyncIterator('onSellHistoryInfo'),
+    },
+    onBuyOrderInfo: {
+      subscribe: () => pubsub.asyncIterator('onBuyOrderInfo'),
+    },
+    onSellOrderInfo: {
+      subscribe: () => pubsub.asyncIterator('onSellOrderInfo'),
+    },
+    onFundRedeemInfo: {
+      subscribe: () => pubsub.asyncIterator('onFundRedeemInfo'),
     },
   },
 };
