@@ -2,8 +2,10 @@ const _ = require('lodash');
 const moment = require('moment');
 const math = require('mathjs');
 const BigNumber = require('bignumber.js');
+const { withFilter } = require('graphql-subscriptions');
 
 const pubsub = require('../pubsub');
+const { sendTradeInfo, withCancel } = require('../publisher');
 const { getLogger } = require('../utils/logger');
 const blockchain = require('../api/blockchain');
 const network = require('../api/network');
@@ -19,6 +21,7 @@ const { getInstance } = require('../rclient');
 
 const DEFAULT_LIMIT_NUM = 50;
 const DEFAULT_SKIP_NUM = 0;
+
 
 function buildCursorOptions(cursor, orderBy, limit, skip) {
   if (!_.isEmpty(orderBy)) {
@@ -877,6 +880,7 @@ module.exports = {
         amount: xAmount,
         blockNum: 0,
       }
+      sendTradeInfo(trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
       await DBHelper.insertTopic(db.Trade, trade)
       return trade;
     },
@@ -885,6 +889,20 @@ module.exports = {
   Subscription: {
     onSyncInfo: {
       subscribe: () => pubsub.asyncIterator('onSyncInfo'),
+    },
+    onMyTradeInfo: {
+      subscribe: () => withFilter(() => pubsub.asyncIterator('onMyTradeInfo'), (payload, variables) => {
+        console.log('mofoooo');
+        console.log(payload);
+        console.log(variables);
+        if (payload.onMyTradeInfo.from === variables.from) {
+          return true;
+        }
+        if (payload.onMyTradeInfo.to === variables.to) {
+          return true;
+        }
+        // return payload.onMyTradeInfo.from === variables.from;
+      }),
     },
     onMyTradeInfo: {
       subscribe: () => pubsub.asyncIterator('onMyTradeInfo'),

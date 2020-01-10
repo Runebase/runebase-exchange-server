@@ -527,7 +527,7 @@ type Subscription {
   onCanceledOrderInfo : canceledOrderInfo
   onActiveOrderInfo : activeOrderInfo
   onFulfilledOrderInfo : fulfilledOrderInfo
-  onMyTradeInfo : myTradeInfo
+  onMyTradeInfo(from: String!, to: String!) : myTradeInfo
   onBuyHistoryInfo : buyHistoryInfo
   onSellHistoryInfo : sellHistoryInfo
   onSellOrderInfo : sellOrderInfo
