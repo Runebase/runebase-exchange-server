@@ -5,7 +5,7 @@ const BigNumber = require('bignumber.js');
 const { withFilter } = require('graphql-subscriptions');
 
 const pubsub = require('../pubsub');
-const { sendTradeInfo, sendFundRedeemInfo } = require('../publisher');
+const { sendTradeInfo, sendFundRedeemInfo, sendSellHistoryInfo, sendBuyHistoryInfo } = require('../publisher');
 const { getLogger } = require('../utils/logger');
 const blockchain = require('../api/blockchain');
 const network = require('../api/network');
@@ -904,6 +904,8 @@ module.exports = {
         blockNum: 0,
       }
       sendTradeInfo(trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
+      sendSellHistoryInfo(trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
+      sendBuyHistoryInfo(trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
       await DBHelper.insertTopic(db.Trade, trade)
       return trade;
     },
@@ -931,6 +933,23 @@ module.exports = {
         }
       }),
     },
+    onSellHistoryInfo: {
+      subscribe: withFilter(() => pubsub.asyncIterator('onSellHistoryInfo'), (payload, variables) => {
+        console.log('onSellHistoryInfo with filter');
+        if (payload.onSellHistoryInfo.token === variables.token && payload.onSellHistoryInfo.orderType === variables.orderType) {
+          return true;
+        }
+      }),
+    },
+    onBuyHistoryInfo: {
+      subscribe: withFilter(() => pubsub.asyncIterator('onBuyHistoryInfo'), (payload, variables) => {
+        console.log('onBuyHistoryInfo with filter');
+        if (payload.onBuyHistoryInfo.token === variables.token && payload.onBuyHistoryInfo.orderType === variables.orderType) {
+          return true;
+        }
+      }),
+    },
+
     onSelectedOrderInfo: {
       subscribe: () => pubsub.asyncIterator('onSelectedOrderInfo'),
     },
@@ -942,12 +961,6 @@ module.exports = {
     },
     onCanceledOrderInfo: {
       subscribe: () => pubsub.asyncIterator('onCanceledOrderInfo'),
-    },
-    onBuyHistoryInfo: {
-      subscribe: () => pubsub.asyncIterator('onBuyHistoryInfo'),
-    },
-    onSellHistoryInfo: {
-      subscribe: () => pubsub.asyncIterator('onSellHistoryInfo'),
     },
     onBuyOrderInfo: {
       subscribe: () => pubsub.asyncIterator('onBuyOrderInfo'),

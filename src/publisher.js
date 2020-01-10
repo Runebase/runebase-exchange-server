@@ -39,3 +39,49 @@ module.exports.sendFundRedeemInfo = function (txid, type, token, tokenName, stat
     },
   });
 }
+
+module.exports.sendSellHistoryInfo = function (status, txid, date, from, to, soldTokens, boughtTokens, token, tokenName, orderType, type, price, orderId, time, amount, blockNum) {
+  pubsub.publish('onSellHistoryInfo', {
+    onSellHistoryInfo: {
+      status,
+      txid,
+      date,
+      from,
+      to,
+      soldTokens,
+      boughtTokens,
+      token,
+      tokenName,
+      orderType,
+      type,
+      price,
+      orderId,
+      time,
+      amount,
+      blockNum,
+    },
+  });
+}
+
+module.exports.sendBuyHistoryInfo = function (status, txid, date, from, to, soldTokens, boughtTokens, token, tokenName, orderType, type, price, orderId, time, amount, blockNum) {
+  pubsub.publish('onBuyHistoryInfo', {
+    onBuyHistoryInfo: {
+      status,
+      txid,
+      date,
+      from,
+      to,
+      soldTokens,
+      boughtTokens,
+      token,
+      tokenName,
+      orderType,
+      type,
+      price,
+      orderId,
+      time,
+      amount,
+      blockNum,
+    },
+  });
+}

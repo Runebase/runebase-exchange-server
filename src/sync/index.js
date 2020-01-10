@@ -4,7 +4,7 @@ const fs = require('fs-extra');
 
 const _ = require('lodash');
 const pubsub = require('../pubsub');
-const { sendTradeInfo, sendFundRedeemInfo } = require('../publisher');
+const { sendTradeInfo, sendFundRedeemInfo, sendSellHistoryInfo, sendBuyHistoryInfo } = require('../publisher');
 const { getLogger } = require('../utils/logger');
 //const { Utils } = require('rweb3');
 const moment = require('moment');
@@ -825,7 +825,13 @@ async function addTrade(rawLog, blockNum, txid){
       await DBHelper.insertTopic(db.Trade, trade)
     }
     await DBHelper.updateTradeOrderByQuery(db.NewOrder, { orderId }, updateOrder);
+
+    // GraphQl push Subs
     sendTradeInfo(trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
+    sendSellHistoryInfo(trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
+    sendBuyHistoryInfo(trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
+
+
     getLogger().debug('Trade Inserted');
     return trade;
   } catch (err) {
