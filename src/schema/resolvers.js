@@ -963,10 +963,20 @@ module.exports = {
       subscribe: () => pubsub.asyncIterator('onCanceledOrderInfo'),
     },
     onBuyOrderInfo: {
-      subscribe: () => pubsub.asyncIterator('onBuyOrderInfo'),
+      subscribe: withFilter(() => pubsub.asyncIterator('onBuyOrderInfo'), (payload, variables) => {
+        console.log('onBuyOrderInfo with filter');
+        if (payload.onBuyOrderInfo.token === variables.token && payload.onBuyOrderInfo.orderType === variables.orderType && payload.onBuyOrderInfo.status === variables.status) {
+          return true;
+        }
+      }),
     },
     onSellOrderInfo: {
-      subscribe: () => pubsub.asyncIterator('onSellOrderInfo'),
+      subscribe: withFilter(() => pubsub.asyncIterator('onSellOrderInfo'), (payload, variables) => {
+        console.log('onSellOrderInfo with filter');
+        if (payload.onSellOrderInfo.token === variables.token && payload.onSellOrderInfo.orderType === variables.orderType && payload.onSellOrderInfo.status === variables.status) {
+          return true;
+        }
+      }),
     },
   },
 };

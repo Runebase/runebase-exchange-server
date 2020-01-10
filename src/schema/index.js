@@ -528,11 +528,11 @@ type Subscription {
   onActiveOrderInfo : activeOrderInfo
   onFulfilledOrderInfo : fulfilledOrderInfo
   onMyTradeInfo(from: String!, to: String!) : myTradeInfo
-  onBuyHistoryInfo (token: String! orderType: String!) : buyHistoryInfo
-  onSellHistoryInfo (token: String! orderType: String!) : sellHistoryInfo
-  onSellOrderInfo : sellOrderInfo
+  onBuyHistoryInfo (token: String!, orderType: String!) : buyHistoryInfo
+  onSellHistoryInfo (token: String!, orderType: String!) : sellHistoryInfo
   onSelectedOrderInfo : selectedOrderInfo
-  onBuyOrderInfo : buyOrderInfo
+  onSellOrderInfo (orderType: String!, token: String!, status: String!) : sellOrderInfo
+  onBuyOrderInfo (orderType: String!, token: String!, status: String!) : buyOrderInfo
 }
 
 input Order {

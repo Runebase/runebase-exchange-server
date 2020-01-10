@@ -26,16 +26,16 @@ module.exports.sendTradeInfo = function (status, txid, date, from, to, soldToken
 module.exports.sendFundRedeemInfo = function (txid, type, token, tokenName, status, owner, time, date, amount, blockNum) {
   pubsub.publish('onFundRedeemInfo', {
     onFundRedeemInfo: {
-    	txid,
-    	type,
-    	token,
-    	tokenName,
-    	status,
-    	owner,
-    	time,
-    	date,
-    	amount,
-    	blockNum,
+      txid,
+      type,
+      token,
+      tokenName,
+      status,
+      owner,
+      time,
+      date,
+      amount,
+      blockNum,
     },
   });
 }
@@ -82,6 +82,54 @@ module.exports.sendBuyHistoryInfo = function (status, txid, date, from, to, sold
       time,
       amount,
       blockNum,
+    },
+  });
+}
+
+module.exports.sendBuyOrderInfo = function (txid, orderId, owner, token, tokenName, price, type, orderType, sellToken, buyToken, priceMul, priceDiv, time, amount, startAmount, blockNum, status) {
+  pubsub.publish('onBuyOrderInfo', {
+    onBuyOrderInfo: {
+      txid,
+      orderId,
+      owner,
+      token,
+      tokenName,
+      price,
+      type,
+      orderType,
+      sellToken,
+      buyToken,
+      priceMul,
+      priceDiv,
+      time,
+      amount,
+      startAmount,
+      blockNum,
+      status,
+    },
+  });
+}
+
+module.exports.sendSellOrderInfo = function (txid, orderId, owner, token, tokenName, price, type, orderType, sellToken, buyToken, priceMul, priceDiv, time, amount, startAmount, blockNum, status) {
+  pubsub.publish('onSellOrderInfo', {
+    onSellOrderInfo: {
+      txid,
+      orderId,
+      owner,
+      token,
+      tokenName,
+      price,
+      type,
+      orderType,
+      sellToken,
+      buyToken,
+      priceMul,
+      priceDiv,
+      time,
+      amount,
+      startAmount,
+      blockNum,
+      status,
     },
   });
 }

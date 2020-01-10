@@ -4,7 +4,7 @@ const fs = require('fs-extra');
 
 const _ = require('lodash');
 const pubsub = require('../pubsub');
-const { sendTradeInfo, sendFundRedeemInfo, sendSellHistoryInfo, sendBuyHistoryInfo } = require('../publisher');
+const { sendTradeInfo, sendFundRedeemInfo, sendSellHistoryInfo, sendBuyHistoryInfo, sendSellOrderInfo, sendBuyOrderInfo } = require('../publisher');
 const { getLogger } = require('../utils/logger');
 //const { Utils } = require('rweb3');
 const moment = require('moment');
@@ -684,6 +684,8 @@ async function syncNewOrder(db, startBlock, endBlock, removeHexPrefix) {
             } else {
               DBHelper.insertTopic(db.NewOrder, newOrder);
             }
+            sendSellOrderInfo(newOrder.txid, newOrder.orderId, newOrder.owner, newOrder.token, newOrder.tokenName, newOrder.price, newOrder.type, newOrder.orderType, newOrder.sellToken, newOrder.buyToken, newOrder.priceMul, newOrder.priceDiv, newOrder.time, newOrder.amount, newOrder.startAmount, newOrder.blockNum, newOrder.status);
+            sendBuyOrderInfo(newOrder.txid, newOrder.orderId, newOrder.owner, newOrder.token, newOrder.tokenName, newOrder.price, newOrder.type, newOrder.orderType, newOrder.sellToken, newOrder.buyToken, newOrder.priceMul, newOrder.priceDiv, newOrder.time, newOrder.amount, newOrder.startAmount, newOrder.blockNum, newOrder.status);
             resolve();
           } catch (err) {
             getLogger().error(`ERROR: ${err.message}`);
