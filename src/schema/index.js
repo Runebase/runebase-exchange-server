@@ -522,7 +522,7 @@ type Mutation {
 
 type Subscription {
   onSyncInfo : syncInfo
-  onFundRedeemInfo : fundRedeemInfo
+  onFundRedeemInfo(owner: String!) : fundRedeemInfo
   onMyOrderInfo : myOrderInfo
   onCanceledOrderInfo : canceledOrderInfo
   onActiveOrderInfo : activeOrderInfo

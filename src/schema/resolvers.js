@@ -5,7 +5,7 @@ const BigNumber = require('bignumber.js');
 const { withFilter } = require('graphql-subscriptions');
 
 const pubsub = require('../pubsub');
-const { sendTradeInfo } = require('../publisher');
+const { sendTradeInfo, sendFundRedeemInfo } = require('../publisher');
 const { getLogger } = require('../utils/logger');
 const blockchain = require('../api/blockchain');
 const network = require('../api/network');
@@ -599,7 +599,18 @@ module.exports = {
         tokenName: token,
         amount: new BigNumber(amount).dividedBy(SATOSHI_CONVERSION).toString(),
       };
-
+      sendFundRedeemInfo(
+        deposit.txid,
+        deposit.type,
+        deposit.token,
+        deposit.tokenName,
+        deposit.status,
+        deposit.owner,
+        deposit.time,
+        deposit.date,
+        deposit.amount,
+        deposit.blockNum
+      );
       await DBHelper.insertTopic(db.FundRedeem, deposit);
       return deposit;
     },
@@ -676,6 +687,18 @@ module.exports = {
         amount: new BigNumber(amount).dividedBy(SATOSHI_CONVERSION).toString(),
       };
       getLogger().debug(JSON.stringify(withdrawal));
+      sendFundRedeemInfo(
+        withdrawal.txid,
+        withdrawal.type,
+        withdrawal.token,
+        withdrawal.tokenName,
+        withdrawal.status,
+        withdrawal.owner,
+        withdrawal.time,
+        withdrawal.date,
+        withdrawal.amount,
+        withdrawal.blockNum
+      );
       await DBHelper.insertTopic(db.FundRedeem, withdrawal);
       return withdrawal;
     },
@@ -900,6 +923,14 @@ module.exports = {
         }
       }),
     },
+    onFundRedeemInfo: {
+      subscribe: withFilter(() => pubsub.asyncIterator('onFundRedeemInfo'), (payload, variables) => {
+        console.log('onFundRedeemInfo with filter');
+        if (payload.onFundRedeemInfo.owner === variables.owner) {
+          return true;
+        }
+      }),
+    },
     onSelectedOrderInfo: {
       subscribe: () => pubsub.asyncIterator('onSelectedOrderInfo'),
     },
@@ -923,9 +954,6 @@ module.exports = {
     },
     onSellOrderInfo: {
       subscribe: () => pubsub.asyncIterator('onSellOrderInfo'),
-    },
-    onFundRedeemInfo: {
-      subscribe: () => pubsub.asyncIterator('onFundRedeemInfo'),
     },
   },
 };

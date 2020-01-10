@@ -22,3 +22,20 @@ module.exports.sendTradeInfo = function (status, txid, date, from, to, soldToken
     },
   });
 }
+
+module.exports.sendFundRedeemInfo = function (txid, type, token, tokenName, status, owner, time, date, amount, blockNum) {
+  pubsub.publish('onFundRedeemInfo', {
+    onFundRedeemInfo: {
+    	txid,
+    	type,
+    	token,
+    	tokenName,
+    	status,
+    	owner,
+    	time,
+    	date,
+    	amount,
+    	blockNum,
+    },
+  });
+}
