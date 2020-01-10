@@ -5,7 +5,7 @@ const BigNumber = require('bignumber.js');
 const { withFilter } = require('graphql-subscriptions');
 
 const pubsub = require('../pubsub');
-const { sendTradeInfo, withCancel } = require('../publisher');
+const { sendTradeInfo } = require('../publisher');
 const { getLogger } = require('../utils/logger');
 const blockchain = require('../api/blockchain');
 const network = require('../api/network');
@@ -891,21 +891,14 @@ module.exports = {
       subscribe: () => pubsub.asyncIterator('onSyncInfo'),
     },
     onMyTradeInfo: {
-      subscribe: () => withFilter(() => pubsub.asyncIterator('onMyTradeInfo'), (payload, variables) => {
-        console.log('mofoooo');
-        console.log(payload);
-        console.log(variables);
+      subscribe: withFilter(() => pubsub.asyncIterator('onMyTradeInfo'), (payload, variables) => {
         if (payload.onMyTradeInfo.from === variables.from) {
           return true;
         }
         if (payload.onMyTradeInfo.to === variables.to) {
           return true;
         }
-        // return payload.onMyTradeInfo.from === variables.from;
       }),
-    },
-    onMyTradeInfo: {
-      subscribe: () => pubsub.asyncIterator('onMyTradeInfo'),
     },
     onSelectedOrderInfo: {
       subscribe: () => pubsub.asyncIterator('onSelectedOrderInfo'),
