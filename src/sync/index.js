@@ -4,7 +4,7 @@ const fs = require('fs-extra');
 
 const _ = require('lodash');
 const pubsub = require('../pubsub');
-const { sendTradeInfo } = require('../publisher');
+const { sendTradeInfo, sendFundRedeemInfo } = require('../publisher');
 const { getLogger } = require('../utils/logger');
 //const { Utils } = require('rweb3');
 const moment = require('moment');
@@ -1106,6 +1106,18 @@ async function syncFundRedeem(db, startBlock, endBlock, removeHexPrefix) {
             } else {
               await DBHelper.insertTopic(db.FundRedeem, fund)
             }
+            sendFundRedeemInfo(
+              fund.txid,
+              fund.type,
+              fund.token,
+              fund.tokenName,
+              fund.status,
+              fund.owner,
+              fund.time,
+              fund.date,
+              fund.amount,
+              fund.blockNum
+            );
             resolve();
           } catch (err) {
             getLogger().error(`ERROR: ${err.message}`);
@@ -1135,6 +1147,18 @@ async function syncFundRedeem(db, startBlock, endBlock, removeHexPrefix) {
             } else {
               await DBHelper.insertTopic(db.FundRedeem, redeem)
             }
+            sendFundRedeemInfo(
+              redeem.txid,
+              redeem.type,
+              redeem.token,
+              redeem.tokenName,
+              redeem.status,
+              redeem.owner,
+              redeem.time,
+              redeem.date,
+              redeem.amount,
+              redeem.blockNum
+            );
             resolve();
           } catch (err) {
             getLogger().error(`ERROR: ${err.message}`);
