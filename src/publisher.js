@@ -133,3 +133,76 @@ module.exports.sendSellOrderInfo = function (txid, orderId, owner, token, tokenN
     },
   });
 }
+
+module.exports.sendActiveOrderInfo = function (txid, orderId, owner, token, tokenName, price, type, orderType, sellToken, buyToken, priceMul, priceDiv, time, amount, startAmount, blockNum, status) {
+  pubsub.publish('onActiveOrderInfo', {
+    onActiveOrderInfo: {
+      txid,
+      orderId,
+      owner,
+      token,
+      tokenName,
+      price,
+      type,
+      orderType,
+      sellToken,
+      buyToken,
+      priceMul,
+      priceDiv,
+      time,
+      amount,
+      startAmount,
+      blockNum,
+      status,
+    },
+  });
+}
+
+
+module.exports.sendFulfilledOrderInfo = function (txid, orderId, owner, token, tokenName, price, type, orderType, sellToken, buyToken, priceMul, priceDiv, time, amount, startAmount, blockNum, status) {
+  pubsub.publish('onFulfilledOrderInfo', {
+    onFulfilledOrderInfo: {
+      txid,
+      orderId,
+      owner,
+      token,
+      tokenName,
+      price,
+      type,
+      orderType,
+      sellToken,
+      buyToken,
+      priceMul,
+      priceDiv,
+      time,
+      amount,
+      startAmount,
+      blockNum,
+      status,
+    },
+  });
+}
+
+module.exports.sendCanceledOrderInfo = function (txid, orderId, owner, token, tokenName, price, type, orderType, sellToken, buyToken, priceMul, priceDiv, time, amount, startAmount, blockNum, status) {
+  pubsub.publish('onCanceledOrderInfo', {
+    onCanceledOrderInfo: {
+      txid,
+      orderId,
+      owner,
+      token,
+      tokenName,
+      price,
+      type,
+      orderType,
+      sellToken,
+      buyToken,
+      priceMul,
+      priceDiv,
+      time,
+      amount,
+      startAmount,
+      blockNum,
+      status,
+    },
+  });
+}

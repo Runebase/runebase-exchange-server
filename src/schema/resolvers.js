@@ -5,7 +5,7 @@ const BigNumber = require('bignumber.js');
 const { withFilter } = require('graphql-subscriptions');
 
 const pubsub = require('../pubsub');
-const { sendTradeInfo, sendFundRedeemInfo, sendSellHistoryInfo, sendBuyHistoryInfo } = require('../publisher');
+const { sendTradeInfo, sendFundRedeemInfo, sendSellHistoryInfo, sendBuyHistoryInfo, sendActiveOrderInfo } = require('../publisher');
 const { getLogger } = require('../utils/logger');
 const blockchain = require('../api/blockchain');
 const network = require('../api/network');
@@ -790,6 +790,7 @@ module.exports = {
         priceDiv: priceFractD,
       };
       await DBHelper.insertTopic(db.NewOrder, tx);
+      sendActiveOrderInfo(tx.txid, tx.orderId, tx.owner, tx.token, tx.tokenName, tx.price, tx.type, tx.orderType, tx.sellToken, tx.buyToken, tx.priceMul, tx.priceDiv, tx.time, tx.amount, tx.startAmount, tx.blockNum, tx.status);
       return tx;
     },
 
@@ -834,6 +835,8 @@ module.exports = {
         receiverAddress: exchangeAddress,
       };
       await DBHelper.cancelOrderByQuery(db.NewOrder, { orderId }, NewOrder);
+      const getOrder = await DBHelper.findOne(db.NewOrder, { orderId });
+      sendActiveOrderInfo(getOrder.txid, getOrder.orderId, getOrder.owner, getOrder.token, getOrder.tokenName, getOrder.price, getOrder.type, getOrder.orderType, getOrder.sellToken, getOrder.buyToken, getOrder.priceMul, getOrder.priceDiv, getOrder.time, getOrder.amount, getOrder.startAmount, getOrder.blockNum, getOrder.status);
       return NewOrder;
     },
 
@@ -949,18 +952,39 @@ module.exports = {
         }
       }),
     },
-
     onSelectedOrderInfo: {
       subscribe: () => pubsub.asyncIterator('onSelectedOrderInfo'),
     },
     onActiveOrderInfo: {
-      subscribe: () => pubsub.asyncIterator('onActiveOrderInfo'),
+      subscribe: withFilter(() => pubsub.asyncIterator('onActiveOrderInfo'), (payload, variables) => {
+        console.log('onActiveOrderInfo with filter');
+        console.log(payload);
+        if (payload.onActiveOrderInfo.status === 'ACTIVE') {
+          return true;
+        }
+        if (payload.onActiveOrderInfo.status === 'PENDING') {
+          return true;
+        }
+        if (payload.onActiveOrderInfo.status === 'PENDINGCANCEL') {
+          return true;
+        }
+      }),
     },
     onFulfilledOrderInfo: {
-      subscribe: () => pubsub.asyncIterator('onFulfilledOrderInfo'),
+      subscribe: withFilter(() => pubsub.asyncIterator('onFulfilledOrderInfo'), (payload, variables) => {
+        if (payload.onFulfilledOrderInfo.status === variables.status) {
+          return true;
+        }
+      }),
     },
     onCanceledOrderInfo: {
-      subscribe: () => pubsub.asyncIterator('onCanceledOrderInfo'),
+      subscribe: withFilter(() => pubsub.asyncIterator('onCanceledOrderInfo'), (payload, variables) => {
+        console.log('onCanceledOrderInfo with filter');
+        console.log(payload);
+        if (payload.onCanceledOrderInfo.status === variables.status) {
+          return true;
+        }
+      }),
     },
     onBuyOrderInfo: {
       subscribe: withFilter(() => pubsub.asyncIterator('onBuyOrderInfo'), (payload, variables) => {

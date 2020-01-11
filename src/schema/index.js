@@ -524,9 +524,9 @@ type Subscription {
   onSyncInfo : syncInfo
   onFundRedeemInfo(owner: String!) : fundRedeemInfo
   onMyOrderInfo : myOrderInfo
-  onCanceledOrderInfo : canceledOrderInfo
+  onCanceledOrderInfo (status: String!) : canceledOrderInfo
   onActiveOrderInfo : activeOrderInfo
-  onFulfilledOrderInfo : fulfilledOrderInfo
+  onFulfilledOrderInfo (status: String!) : fulfilledOrderInfo
   onMyTradeInfo(from: String!, to: String!) : myTradeInfo
   onBuyHistoryInfo (token: String!, orderType: String!) : buyHistoryInfo
   onSellHistoryInfo (token: String!, orderType: String!) : sellHistoryInfo

@@ -4,7 +4,7 @@ const fs = require('fs-extra');
 
 const _ = require('lodash');
 const pubsub = require('../pubsub');
-const { sendTradeInfo, sendFundRedeemInfo, sendSellHistoryInfo, sendBuyHistoryInfo, sendSellOrderInfo, sendBuyOrderInfo } = require('../publisher');
+const { sendTradeInfo, sendFundRedeemInfo, sendSellHistoryInfo, sendBuyHistoryInfo, sendSellOrderInfo, sendBuyOrderInfo, sendActiveOrderInfo, sendCanceledOrderInfo, sendFulfilledOrderInfo } = require('../publisher');
 const { getLogger } = require('../utils/logger');
 //const { Utils } = require('rweb3');
 const moment = require('moment');
@@ -686,6 +686,8 @@ async function syncNewOrder(db, startBlock, endBlock, removeHexPrefix) {
             }
             sendSellOrderInfo(newOrder.txid, newOrder.orderId, newOrder.owner, newOrder.token, newOrder.tokenName, newOrder.price, newOrder.type, newOrder.orderType, newOrder.sellToken, newOrder.buyToken, newOrder.priceMul, newOrder.priceDiv, newOrder.time, newOrder.amount, newOrder.startAmount, newOrder.blockNum, newOrder.status);
             sendBuyOrderInfo(newOrder.txid, newOrder.orderId, newOrder.owner, newOrder.token, newOrder.tokenName, newOrder.price, newOrder.type, newOrder.orderType, newOrder.sellToken, newOrder.buyToken, newOrder.priceMul, newOrder.priceDiv, newOrder.time, newOrder.amount, newOrder.startAmount, newOrder.blockNum, newOrder.status);
+            sendActiveOrderInfo(newOrder.txid, newOrder.orderId, newOrder.owner, newOrder.token, newOrder.tokenName, newOrder.price, newOrder.type, newOrder.orderType, newOrder.sellToken, newOrder.buyToken, newOrder.priceMul, newOrder.priceDiv, newOrder.time, newOrder.amount, newOrder.startAmount, newOrder.blockNum, newOrder.status);
+
             resolve();
           } catch (err) {
             getLogger().error(`ERROR: ${err.message}`);
@@ -731,6 +733,7 @@ async function syncOrderCancelled(db, startBlock, endBlock, removeHexPrefix) {
             const cancelOrder = new CancelOrder(blockNum, txid, OutputBytecode).translate();
             const orderId = cancelOrder.orderId;
             await DBHelper.updateCanceledOrdersByQuery(db.NewOrder, { orderId }, cancelOrder);
+            sendCanceledOrderInfo(cancelOrder.txid, cancelOrder.orderId, cancelOrder.owner, cancelOrder.token, cancelOrder.tokenName, cancelOrder.price, cancelOrder.type, cancelOrder.orderType, cancelOrder.sellToken, cancelOrder.buyToken, cancelOrder.priceMul, cancelOrder.priceDiv, cancelOrder.time, cancelOrder.amount, cancelOrder.startAmount, cancelOrder.blockNum, cancelOrder.status);
             resolve();
           } catch (err) {
             getLogger().error(`ERROR: ${err.message}`);
@@ -771,19 +774,24 @@ async function syncOrderFulfilled(db, startBlock, endBlock, removeHexPrefix) {
       data,
       topics);
       if (OutputBytecode._eventName === 'OrderFulfilled') {
-        const fulfillOrderDB = new Promise(async (resolve) => {
-          try {
-            const fulfillOrder = new FulfillOrder(blockNum, txid, OutputBytecode).translate();
-            const orderId = fulfillOrder.orderId;
-            await DBHelper.updateFulfilledOrdersByQuery(db.NewOrder, { orderId }, fulfillOrder);
-            //await DBHelper.removeOrdersByQuery(db.NewOrder, { orderId: fulfillOrder.orderId });
-            resolve();
-          } catch (err) {
-            getLogger().error(`ERROR: ${err.message}`);
-            resolve();
-          }
-        });
-        createFulfillOrderPromises.push(fulfillOrderDB);
+        if (parseInt(OutputBytecode._time.toString(10)) > 10000000) {
+          const fulfillOrderDB = new Promise(async (resolve) => {
+            try {
+              const fulfillOrder = new FulfillOrder(blockNum, txid, OutputBytecode).translate();
+              const orderId = fulfillOrder.orderId;
+              await DBHelper.updateFulfilledOrdersByQuery(db.NewOrder, { orderId }, fulfillOrder);
+              //await DBHelper.removeOrdersByQuery(db.NewOrder, { orderId: fulfillOrder.orderId });
+              const getOrder = await DBHelper.findOne(db.NewOrder, { orderId });
+              console.log(getOrder);
+              sendFulfilledOrderInfo(getOrder.txid, getOrder.orderId, getOrder.owner, getOrder.token, getOrder.tokenName, getOrder.price, getOrder.type, getOrder.orderType, getOrder.sellToken, getOrder.buyToken, getOrder.priceMul, getOrder.priceDiv, getOrder.time, getOrder.amount, getOrder.startAmount, getOrder.blockNum, getOrder.status);
+              resolve();
+            } catch (err) {
+              getLogger().error(`ERROR: ${err.message}`);
+              resolve();
+            }
+          });
+          createFulfillOrderPromises.push(fulfillOrderDB);
+        }
       }
     });
   });
