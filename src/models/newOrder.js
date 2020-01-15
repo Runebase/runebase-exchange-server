@@ -3,6 +3,7 @@
 const _ = require('lodash');
 const { Decoder, Utils } = require('rweb3');
 const math = require('mathjs')
+const stripHexPrefix = require('strip-hex-prefix');
 const { isMainnet, getContractMetadata } = require('../config');
 const { orderState } = require('../constants');
 
@@ -23,6 +24,12 @@ class NewOrder {
   }
 
   decode() {
+    if (this.rawLog._sellToken.toString(10) === '0x0000000000000000000000000000000000000000') {
+      this.tokenAddress = stripHexPrefix(this.rawLog._buyToken.toString(10));
+    }
+    if (this.rawLog._buyToken.toString(10) === '0x0000000000000000000000000000000000000000') {
+      this.tokenAddress = stripHexPrefix(this.rawLog._sellToken.toString(10));
+    }
     for (let key in this.tokens){
       if (this.tokens[key]['address'] === this.sellToken || this.tokens[key]['address'] === this.buyToken) {
         this.token = this.tokens[key]['market'];
@@ -44,8 +51,6 @@ class NewOrder {
     const c = math.number(g);
     this.price = c;
     this.orderId = this.rawLog._id.toString(10);
-    this.sellToken = this.sellToken;
-    this.buyToken = this.buyToken;
     this.startAmount = this.rawLog._amount.toString(10);
     this.amount = this.rawLog._amount.toString(10);
     this.owner = this.rawLog._owner;
@@ -55,6 +60,7 @@ class NewOrder {
   translate() {
     return {
       txid: this.txid,
+      tokenAddress: this.tokenAddress,
       type: this.type,
       token: this.token,
       tokenName: this.tokenName,

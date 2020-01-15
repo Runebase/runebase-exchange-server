@@ -34,9 +34,9 @@ contract TokenRegistry is Owned {
 
     mapping(address => Listing) public Listings;
 
-    event ListingCreated(address indexed _tokenAddress, string _tokenName, string _tokenSymbol, string _tokenLogo, uint8 _tokenDecimals, uint8 _tokenVersion);
-    event ListingUpdated(address indexed _tokenAddress, string _tokenName, string _tokenSymbol, string _tokenLogo, uint8 _tokenDecimals, uint8 _tokenVersion);
-    event ListingDeleted(address indexed _tokenAddress);
+    event ListingCreated(address indexed _tokenAddress, string _tokenName, string _tokenSymbol, string _tokenLogo, uint8 _tokenDecimals, uint8 _tokenVersion, uint256 _time);
+    event ListingUpdated(address indexed _tokenAddress, string _tokenName, string _tokenSymbol, string _tokenLogo, uint8 _tokenDecimals, uint8 _tokenVersion, uint256 _time);
+    event ListingDeleted(address indexed _tokenAddress, uint256 _time);
 
     function addListing(address _tokenAddress, string _tokenName, string _tokenSymbol, string _tokenLogo, uint8 _tokenDecimals, uint8 _tokenVersion) public onlyOwner {
         Listing memory listing;
@@ -47,7 +47,7 @@ contract TokenRegistry is Owned {
         listing.tokenVersion = _tokenVersion;
 
         Listings[_tokenAddress] = listing;
-        emit ListingCreated(_tokenAddress, _tokenName, _tokenSymbol, _tokenLogo, _tokenDecimals, _tokenVersion);
+        emit ListingCreated(_tokenAddress, _tokenName, _tokenSymbol, _tokenLogo, _tokenDecimals, _tokenVersion, now);
     }
 
     function updateListing(address _tokenAddress, string _tokenName, string _tokenSymbol, string _tokenLogo, uint8 _tokenDecimals, uint8 _tokenVersion) public onlyOwner {
@@ -57,13 +57,13 @@ contract TokenRegistry is Owned {
         Listings[_tokenAddress].tokenDecimals = _tokenDecimals;
         Listings[_tokenAddress].tokenVersion = _tokenVersion;
 
-        emit ListingUpdated(_tokenAddress, _tokenName, _tokenSymbol, _tokenLogo, _tokenDecimals, _tokenVersion);
+        emit ListingUpdated(_tokenAddress, _tokenName, _tokenSymbol, _tokenLogo, _tokenDecimals, _tokenVersion, now);
     }
 
     function deleteListing(address _tokenAddress) public onlyOwner {
         delete Listings[_tokenAddress];
 
-        emit ListingDeleted(_tokenAddress);
+        emit ListingDeleted(_tokenAddress, now);
     }
 
     function getListing(address _tokenAddress) public view returns(string memory, string memory, string memory, uint8, uint8) {

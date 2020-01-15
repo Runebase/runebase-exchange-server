@@ -1,8 +1,5 @@
 /* eslint no-underscore-dangle: 0 */
 
-const _ = require('lodash');
-const { Decoder, Utils } = require('rweb3');
-
 class Market {
   constructor(marketData) {
     this.marketData = marketData;
@@ -16,11 +13,13 @@ class Market {
     this.abi = this.marketData._tokenVersion.toString(10);
     this.image = this.marketData._tokenLogo.toString(10);
     this.decimals = this.marketData._tokenDecimals.toString(10);
+    this.startTime = parseInt(this.marketData._time.toString(10));
   }
 
   translate() {
     return {
       market: this.market,
+      startTime: this.startTime,
       tokenName: this.tokenName,
       price: '',
       change: '',

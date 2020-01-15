@@ -33,6 +33,9 @@ const Web3 = require('web3')
 const web3 = new Web3();
 const abi = require('ethjs-abi');
 
+// Example to hash event functions
+// console.log(Web3.utils.sha3('ListingCreated(address,string,string,string,uint8,uint8,uint256)'))
+
 const RPC_BATCH_SIZE = 5;
 const BLOCK_BATCH_SIZE = 200;
 const SYNC_THRESHOLD_SECS = 1200;
@@ -40,6 +43,45 @@ const SYNC_THRESHOLD_SECS = 1200;
 // hardcode sender address as it doesnt matter
 let MetaData;
 let senderAddress;
+
+const tables = ['1h', '3h', '6h', '12h', 'd', 'w'];
+const looptimes = [];
+looptimes['1h'] = 3600;
+looptimes['3h'] = 10800;
+looptimes['6h'] = 21600;
+looptimes['12h'] = 43200;
+looptimes['d'] = 86400;
+looptimes['w'] = 604800;
+
+
+async function updateEmptyCandles(db) {
+  const markets = await db.Markets.find({});
+  let ohlc_change = {};
+  let ohlc;
+
+  for (market of markets) {
+    for (t of tables) {
+      ohlc = await db.Charts.cfind({ tokenAddress: market.address, timeTable: t }).sort({ time: -1 }).limit(1).exec();
+      console.log('moment().unix() + looptimes[t]: ' + (parseInt(moment().unix()) + looptimes[t]));
+      console.log('ohlc[0].time: ' + ohlc[0].time);
+      while ((parseInt(moment().unix()) + looptimes[t]) < ohlc[0].time) {
+        const ohlc_change = {
+          tokenAddress: market.address,
+          timeTable: t,
+          time: (parseInt(ohlc[0].time) + looptimes[t]),
+          open: ohlc[0].close,
+          high: ohlc[0].close,
+          low: ohlc[0].close,
+          close: ohlc[0].close,
+          volume: 0,
+        };
+        console.log(ohlc_change);
+        await db.Charts.insert(ohlc_change);
+        ohlc = await db.Charts.cfind({ tokenAddress: market.address, timetable: t }).sort({ time: -1 }).limit(1).exec();
+      }
+    }
+  }
+}
 
 function sequentialLoop(iterations, process, exit) {
   let index = 0;
@@ -167,6 +209,7 @@ async function sync(db) {
         }
         getLogger().debug('sleep');
         setTimeout(startSync, 5000);
+        setInterval(updateEmptyCandles, 100000, db);
       // execute rpc batch by batch
     },
   );
@@ -204,31 +247,22 @@ async function syncTokenListingCreated(db, startBlock, endBlock, removeHexPrefix
 
             if (await DBHelper.getCount(db.Markets, { address: marketAddress }) > 0) {
               const getMarket = await DBHelper.findOne(db.Markets, { address: marketAddress });
-              /// Rename Chart File
-              const oldSrc = blockchainDataPath + '/' + getMarket.market + '.tsv';
-              const newSrc = blockchainDataPath + '/' + market.market + '.tsv';
-              if (oldSrc !== newSrc) {
-                fs.rename(oldSrc, newSrc, function (err) {
-                  if (err) throw err;
-                });
-              }
               await DBHelper.updateMarketByQuery(db.Markets, { address: marketAddress }, market);
-              ///
             } else {
-              db.Markets.insert(market).then((value)=>{
-                /// init Chart File
-                const addMarket = market.market;
-                const dataSrc = blockchainDataPath + '/' + addMarket + '.tsv';
-                if (!fs.existsSync(dataSrc)){
-                  fs.writeFile(dataSrc, 'date\topen\thigh\tlow\tclose\tvolume\n2018-01-01\t0\t0\t0\t0\t0\n2018-01-02\t0\t0\t0\t0\t0\n', { flag: 'w' }, function(err) {
-                    if (err)
-                      return console.error(err);
-                  });
-                }
-                fs.closeSync(fs.openSync(dataSrc, 'a'));
-                ///
-              });
-
+              for (t of tables) {
+                const initChart = {
+                  tokenAddress: marketAddress,
+                  timeTable: t,
+                  time: market.startTime,
+                  open: 0,
+                  high: 0,
+                  low: 0,
+                  close: 0,
+                  volume: 0,
+                };
+                await db.Charts.insert(initChart);
+              }
+              await db.Markets.insert(market);
             }
             await DBHelper.changeMarketByQuery(db.NewOrder, { sellToken: marketAddress }, market);
             await DBHelper.changeMarketByQuery(db.NewOrder, { buyToken: marketAddress }, market);
@@ -782,7 +816,6 @@ async function syncOrderFulfilled(db, startBlock, endBlock, removeHexPrefix) {
               await DBHelper.updateFulfilledOrdersByQuery(db.NewOrder, { orderId }, fulfillOrder);
               //await DBHelper.removeOrdersByQuery(db.NewOrder, { orderId: fulfillOrder.orderId });
               const getOrder = await DBHelper.findOne(db.NewOrder, { orderId });
-              console.log(getOrder);
               sendFulfilledOrderInfo(getOrder.txid, getOrder.orderId, getOrder.owner, getOrder.token, getOrder.tokenName, getOrder.price, getOrder.type, getOrder.orderType, getOrder.sellToken, getOrder.buyToken, getOrder.priceMul, getOrder.priceDiv, getOrder.time, getOrder.amount, getOrder.startAmount, getOrder.blockNum, getOrder.status);
               resolve();
             } catch (err) {
@@ -836,11 +869,75 @@ async function addTrade(rawLog, blockNum, txid){
     }
     await DBHelper.updateTradeOrderByQuery(db.NewOrder, { orderId }, updateOrder);
 
+    let ohlc_change = {};
+
+    for (t of tables) {
+      if (await DBHelper.getCount(db.Charts, { tokenAddress: trade.tokenAddress, timeTable: t }) > 0) {
+        let ohlc = await db.Charts.cfind({ tokenAddress: trade.tokenAddress, timeTable: t, time: { $lt: trade.time } }).sort({ time: -1 }).limit(1).exec();
+        if (trade.time - looptimes[t] > ohlc[0].time) {
+          while (trade.time - looptimes[t] > ohlc[0].time) {
+            ohlc_change = {
+              tokenAddress: trade.tokenAddress,
+              timeTable: t,
+              time: ohlc[0].time + looptimes[t],
+              open: ohlc[0].close,
+              close: ohlc[0].close,
+              high: ohlc[0].close,
+              low: ohlc[0].close,
+              volume: 0,
+            };
+
+            await db.Charts.insert(ohlc_change);
+            ohlc = await db.Charts.cfind({ tokenAddress: trade.tokenAddress, timeTable: t, time: { $lt: trade.time } }).sort({ time: -1 }).limit(1).exec();
+          }
+          ohlc_change = {
+            tokenAddress: trade.tokenAddress,
+            timeTable: t,
+            time: ohlc[0].time,
+            open: ohlc[0].close,
+            close: trade.price,
+            volume: 0 + parseInt(trade.amount),
+          };
+
+          if (trade.price > ohlc[0].high) {
+            ohlc_change.high = trade.price;
+          } else {
+            ohlc_change.high = ohlc[0].high;
+          }
+          if (trade.price < ohlc[0].low) {
+            ohlc_change.low = trade.price;
+          } else {
+            ohlc_change.low = ohlc[0].low;
+          }
+          await db.Charts.insert(ohlc_change);
+        } else {
+          ohlc_change = {
+            tokenAddress: trade.tokenAddress,
+            timeTable: t,
+            time: ohlc[0].time,
+            close: trade.price,
+            volume: ohlc[0].volume + parseInt(trade.amount),
+          };
+          if (trade.price > ohlc[0].high) {
+            ohlc_change.high = trade.price;
+          } else {
+            ohlc_change.high = ohlc[0].high;
+          }
+          if (trade.price < ohlc[0].low) {
+            ohlc_change.low = trade.price;
+          } else {
+            ohlc_change.low = ohlc[0].low;
+          }
+          await DBHelper.updateObjectByQuery(db.Charts, { time: ohlc[0].time, timeTable: t }, ohlc_change);
+
+        }
+      }
+    }
+
     // GraphQl push Subs
     sendTradeInfo(trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
     sendSellHistoryInfo(trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
     sendBuyHistoryInfo(trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
-
 
     getLogger().debug('Trade Inserted');
     return trade;
@@ -891,77 +988,7 @@ async function syncTrade(db, startBlock, endBlock, removeHexPrefix) {
       let OutputBytecode = await abi.decodeEvent(MetaData['Exchange']['Abi'][20], data, topics);
 
       if (OutputBytecode._eventName === 'Trade' && parseInt(OutputBytecode._time.toString(10)) !== 0) {
-        const trade = await addTrade(OutputBytecode, blockNum, txid).then(trade => new Promise(async (resolve) => {
-        const dataSrc = blockchainDataPath + '/' + trade.token + '.tsv';
-        if (!fs.existsSync(dataSrc)){
-          fs.writeFile(dataSrc, 'date\topen\thigh\tlow\tclose\tvolume\n', { flag: 'w' }, function(err) {
-            if (err)
-              return console.error(err);
-          });
-        }
-        fs.closeSync(fs.openSync(dataSrc, 'a'));
-        results = await readFile(dataSrc);
-        const lines = results.trim().split('\n');
-        const lastLine = lines.slice(-1)[0];
-        const fields = lastLine.split('\t');
-        const LastDate = fields.slice(0)[0];
-        const LastOpen = fields.slice(0)[1];
-        const LastHigh = fields.slice(0)[2];
-        const LastLow = fields.slice(0)[3];
-        const LastClose = fields.slice(0)[4];
-        const LastVolume = fields.slice(0)[5];
-        const tradeDate = moment.unix(trade.time).format('YYYY-MM-DD');
-        const tradeAmount = trade.amount / 1e8;
-        if (LastDate == tradeDate) {
-          const newVolume = parseFloat(LastVolume) + parseFloat(tradeAmount);
-          let newLow = LastLow;
-          let newHigh = LastHigh;
-          if (trade.price < LastLow) {
-            newLow = trade.price;
-          }
-          if (trade.price > LastHigh) {
-            newHigh= trade.price;
-          }
-          const upData = tradeDate + '\t' + LastClose + '\t' + newHigh + '\t' + newLow + '\t' + trade.price + '\t' + newVolume.toFixed(8);
-          buffer = Buffer.from(upData);
-
-          fs.open(dataSrc, 'a', function(err, fd) {
-            if (err) {
-              throw 'error opening file: ' + err;
-            }
-            fs.readFile(dataSrc, 'utf8', function (err,data) {
-              if (err) {
-                return console.log(err);
-              }
-              const re = new RegExp(lastLine,"g");
-              const result = data.replace(re, upData);
-              fs.writeFile(dataSrc, result, 'utf8', function (err) {
-                if (err) throw 'error writing file: ' + err;
-                  fs.close(fd, function() {
-                      resolve();
-                  })
-                });
-              });
-            });
-          }
-          if (LastDate != tradeDate) {
-            const newData = tradeDate + '\t' + LastClose + '\t' + trade.price + '\t' + trade.price + '\t' + trade.price + '\t' + tradeAmount.toFixed(8) + '\n' ;
-            const buffer = new Buffer(newData);
-            fs.open(dataSrc, 'a', function(err, fd) {
-                if (err) {
-                    throw 'error opening file: ' + err;
-                }
-                fs.write(fd, buffer, 0, buffer.length, null, function(err) {
-                    console.log(fd);
-                    if (err) throw 'error writing file: ' + err;
-                    fs.close(fd, function() {
-                        console.log('End Charting Data');
-                        resolve();
-                    })
-                });
-            });
-          }
-        }));
+        const trade = await addTrade(OutputBytecode, blockNum, txid);
       }
     }
   }

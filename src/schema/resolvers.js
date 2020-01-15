@@ -68,12 +68,60 @@ function buildTransactionFilters({
   return filters;
 }
 
-function buildNewOrderFilters({
-  OR = [], txid, tokenName, startAmount, orderType, status, token, type, price, orderId, owner, sellToken, buyToken, priceMul, priceDiv, time, amount, blockNum
+function buildChartFilters({
+  OR = [], tokenAddress, timeTable, time, open, high, low, close, volume,
 }) {
-  const filter = (txid || tokenName || startAmount || orderType || status || token || type || price || orderId || owner || sellToken || buyToken || priceMul || priceDiv || time || amount || blockNum) ? {} : null;
+  const filter = (tokenAddress || timeTable || time || open || high || low || close || volume) ? {} : null;
+
+  if (tokenAddress) {
+    filter.tokenAddress = tokenAddress;
+  }
+
+  if (timeTable) {
+    filter.timeTable = timeTable;
+  }
+
+  if (time) {
+    filter.time = time;
+  }
+
+  if (open) {
+    filter.open = open;
+  }
+
+  if (high) {
+    filter.high = high;
+  }
+
+  if (low) {
+    filter.low = low;
+  }
+
+  if (close) {
+    filter.close = close;
+  }
+
+  if (volume) {
+    filter.volume = volume;
+  }
+
+  let filters = filter ? [filter] : [];
+  for (let i = 0; i < OR.length; i++) {
+    filters = filters.concat(buildChartFilters(OR[i]));
+  }
+  return filters;
+}
+
+function buildNewOrderFilters({
+  OR = [], txid, tokenAddress, tokenName, startAmount, orderType, status, token, type, price, orderId, owner, sellToken, buyToken, priceMul, priceDiv, time, amount, blockNum
+}) {
+  const filter = (txid || tokenAddress || tokenName || startAmount || orderType || status || token || type || price || orderId || owner || sellToken || buyToken || priceMul || priceDiv || time || amount || blockNum) ? {} : null;
   if (txid) {
     filter.txid = txid;
+  }
+
+  if (tokenAddress) {
+    filter.tokenAddress = tokenAddress;
   }
 
   if (tokenName) {
@@ -186,12 +234,16 @@ function buildMarketFilters({
 }
 
 function buildTradeFilters({
-  OR = [], txid, type, status, date, from, to, soldTokens, boughtTokens, tokenName, token, orderType, price, orderId, time, amount, blockNum
+  OR = [], txid, tokenAddress, type, status, date, from, to, soldTokens, boughtTokens, tokenName, token, orderType, price, orderId, time, amount, blockNum
 }) {
-  const filter = (txid || type || status || date || from || to || soldTokens || boughtTokens || tokenName || token || orderType || price || orderId  || time || amount || blockNum) ? {} : null;
+  const filter = (txid || tokenAddress || type || status || date || from || to || soldTokens || boughtTokens || tokenName || token || orderType || price || orderId  || time || amount || blockNum) ? {} : null;
 
   if (txid) {
     filter.txid = txid;
+  }
+
+  if (tokenAddress) {
+    filter.tokenAddress = tokenAddress;
   }
 
   if (type) {
@@ -421,6 +473,15 @@ module.exports = {
     }, { db: { Transactions } }) => {
       const query = filter ? { $or: buildTransactionFilters(filter) } : {};
       let cursor = Transactions.cfind(query);
+      cursor = buildCursorOptions(cursor, orderBy, limit, skip);
+      return cursor.exec();
+    },
+
+    allCharts: async (root, {
+      filter, orderBy, limit, skip,
+    }, { db: { Charts } }) => {
+      const query = filter ? { $or: buildChartFilters(filter) } : {};
+      let cursor = Charts.cfind(query);
       cursor = buildCursorOptions(cursor, orderBy, limit, skip);
       return cursor.exec();
     },
@@ -718,7 +779,7 @@ module.exports = {
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
       let sentTx;
-      let tokenaddress;
+      let tokenAddress;
       const priceFract = math.fraction(price);
       const priceFractN = priceFract.n;
       const priceFractD = priceFract.d;
@@ -726,7 +787,7 @@ module.exports = {
       for (TokenName in markets) {
         if (token == markets[TokenName]['market']) {
           try {
-            tokenaddress = markets[TokenName]['address'];
+            tokenAddress = markets[TokenName]['address'];
           } catch (err) {
             getLogger().error(`Error calling MetaData['Tokens'][${TokenName}]['Address']: ${err.message}`);
             throw err;
@@ -739,7 +800,7 @@ module.exports = {
           exchangeAddress: MetaData['Exchange']['Address'],
           amount,
           token,
-          tokenaddress,
+          tokenAddress,
           senderAddress,
           priceFractN,
           priceFractD,
@@ -750,16 +811,15 @@ module.exports = {
         getLogger().error(`Error calling orderExchange: ${err.message}`);
         throw err;
       }
-      console.log(txid);
       let typeOrder;
       if (orderType == 'buy') {
         typeOrder = 'BUYORDER';
         sellToken = MetaData['BaseCurrency']['Address'];
-        buyToken = tokenaddress;
+        buyToken = tokenAddress;
       }
       if (orderType == 'sell') {
         typeOrder = 'SELLORDER'
-        sellToken = tokenaddress;
+        sellToken = tokenAddress;
         buyToken = MetaData['BaseCurrency']['Address'];
       }
       // Insert Transaction
@@ -767,6 +827,7 @@ module.exports = {
       const gasPrice = sentTx ? sentTx.args.gasPrice : Config.DEFAULT_GAS_PRICE;
       const tx = {
         txid,
+        tokenAddress,
         type: typeOrder,
         orderType: typeOrder,
         tokenName: token,
@@ -882,6 +943,7 @@ module.exports = {
       }
       const trade = {
         date: new Date(moment().unix()*1000),
+        tokenAddress: getOrder.tokenAddress,
         type: getOrder.orderType,
         txid,
         type: 'EXECUTEORDER',

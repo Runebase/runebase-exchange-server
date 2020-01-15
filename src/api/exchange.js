@@ -110,7 +110,7 @@ const Exchange = {
       exchangeAddress, // address
       amount,
       token,
-      tokenaddress,
+      tokenAddress,
       senderAddress,
       priceFractN,
       priceFractD,
@@ -122,6 +122,9 @@ const Exchange = {
     }
     if (_.isUndefined(exchangeAddress)) {
       throw new TypeError('exchangeAddress needs to be defined');
+    }
+    if (_.isUndefined(tokenAddress)) {
+      throw new TypeError('tokenAddress needs to be defined');
     }
     if (_.isUndefined(amount)) {
       throw new TypeError('amount needs to be defined');
@@ -142,13 +145,13 @@ const Exchange = {
     let res;
     if (orderType == 'buy') {
       res = await getContract(exchangeAddress, abi).send('createOrder', {
-        methodArgs: ["0000000000000000000000000000000000000000", tokenaddress, amount, priceFractN, priceFractD],
+        methodArgs: ["0000000000000000000000000000000000000000", tokenAddress, amount, priceFractN, priceFractD],
         senderAddress,
       });
     }
     if (orderType == 'sell') {
       res = await getContract(exchangeAddress, abi).send('createOrder', {
-        methodArgs: [tokenaddress, "0000000000000000000000000000000000000000", amount, priceFractN, priceFractD],
+        methodArgs: [tokenAddress, "0000000000000000000000000000000000000000", amount, priceFractN, priceFractD],
         senderAddress,
       });
     }

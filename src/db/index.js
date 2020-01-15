@@ -19,6 +19,7 @@ const db = {
   Markets: undefined,
   FundRedeem: undefined,
   BaseCurrency: undefined,
+  Charts: undefined,
 };
 
 
@@ -45,6 +46,7 @@ async function initDB() {
   db.Markets = datastore({ filename: `${blockchainDataPath}/markets.db` });
   db.FundRedeem = datastore({ filename: `${blockchainDataPath}/fundRedeem.db` });
   db.BaseCurrency = datastore({ filename: `${blockchainDataPath}/baseCurrency.db` });
+  db.Charts = datastore({ filename: `${blockchainDataPath}/charts.db` });
 
   try {
     await Promise.all([
@@ -57,6 +59,7 @@ async function initDB() {
       db.Markets.loadDatabase(),
       db.FundRedeem.loadDatabase(),
       db.BaseCurrency.loadDatabase(),
+      db.Charts.loadDatabase(),
     ]);
 
 
@@ -77,42 +80,6 @@ async function initDB() {
 
     await ImportBaseCurrency();
 
-
-//    const ImportMarket = (Key) => new Promise((resolve, reject) => {
-//      db.Markets.count({ market: MetaData['Tokens'][Key]['Pair'] }, function (err, count) {
-//        if (count === 0) {
-//          const market = new Market(MetaData['Tokens'][Key]['Pair'], MetaData['Tokens'][Key]).translate();
-//          db.Markets.insert(market).then((value)=>{
-//              resolve();
-//          });
-//        } else {
-//          resolve();
-//        }
-//      })
-//    });
-
-//    (async() => {
-//      for (let key in MetaData['Tokens']) {
-//        try {
-//          await ImportMarket(key);
-//        } catch (err) {
-//          logger.error(`ImportMarket error: ${err.message}`);
-//        }
-
-//      }
-//    })();
-
-    for (MarketName in MetaData['Tokens']){
-      const addMarket = MetaData['Tokens'][MarketName]['Pair'];
-      const dataSrc = blockchainDataPath + '/' + addMarket + '.tsv';
-      if (!fs.existsSync(dataSrc)){
-        fs.writeFile(dataSrc, 'date\topen\thigh\tlow\tclose\tvolume\n2018-01-01\t0\t0\t0\t0\t0\n2018-01-02\t0\t0\t0\t0\t0\n', { flag: 'w' }, function(err) {
-          if (err)
-            return console.error(err);
-        });
-      }
-      fs.closeSync(fs.openSync(dataSrc, 'a'));
-    }
   } catch (err) {
     throw Error(`DB load Error: ${err.message}`);
   }
@@ -216,10 +183,9 @@ class DBHelper {
         { multi: true },
       );
     } catch (err) {
-      getLogger().error(`Error update Topic by query:${query}: ${err.message}`);
+      getLogger().error(`Error update ChangeMarket by query:${query}: ${err.message}`);
     }
   }
-
 
   static async updateMarketByQuery(database, query, topic) {
     try {
@@ -241,7 +207,7 @@ class DBHelper {
         { multi: true },
       );
     } catch (err) {
-      getLogger().error(`Error update Topic by query:${query}: ${err.message}`);
+      getLogger().error(`Error update Market by query:${query}: ${err.message}`);
     }
   }
 
@@ -296,7 +262,7 @@ class DBHelper {
         {},
       );
     } catch (err) {
-      getLogger().error(`Error update Topic by query:${query}: ${err.message}`);
+      getLogger().error(`Error update FundRedeem by query:${query}: ${err.message}`);
     }
   }
 
@@ -312,6 +278,7 @@ class DBHelper {
           $set: {
             date: topic.date,
             txid: topic.txid,
+            tokenAddress: topic.tokenAddress,
             status: topic.status,
             orderId: topic.orderId,
             time: topic.time,
@@ -329,7 +296,7 @@ class DBHelper {
         {},
       );
     } catch (err) {
-      getLogger().error(`Error update Topic by query:${query}: ${err.message}`);
+      getLogger().error(`Error update Trade by query:${query}: ${err.message}`);
     }
   }
 
@@ -353,7 +320,7 @@ class DBHelper {
         {},
       );
     } catch (err) {
-      getLogger().error(`Error update Topic by query:${query}: ${err.message}`);
+      getLogger().error(`Error update Markets by query:${query}: ${err.message}`);
     }
   }
 
@@ -376,7 +343,7 @@ class DBHelper {
         {},
       );
     } catch (err) {
-      getLogger().error(`Error update Topic by query:${query}: ${err.message}`);
+      getLogger().error(`Error update CanceledOrders by query:${query}: ${err.message}`);
     }
   }
 
@@ -399,7 +366,7 @@ class DBHelper {
         {},
       );
     } catch (err) {
-      getLogger().error(`Error update Topic by query:${query}: ${err.message}`);
+      getLogger().error(`Error update FulfilledOrders by query:${query}: ${err.message}`);
     }
   }
 
@@ -414,6 +381,7 @@ class DBHelper {
         {
           $set: {
             txid: topic.txid,
+            tokenAddress: topic.tokenAddress,
             orderId: topic.orderId,
             blockNum: topic.blockNum,
             token: topic.token,
@@ -435,7 +403,7 @@ class DBHelper {
         {},
       );
     } catch (err) {
-      getLogger().error(`Error update Topic by query:${query}: ${err.message}`);
+      getLogger().error(`Error update Orders by query:${query}: ${err.message}`);
     }
   }
 
@@ -455,7 +423,7 @@ class DBHelper {
         {},
       );
     } catch (err) {
-      getLogger().error(`Error update Topic by query:${query}: ${err.message}`);
+      getLogger().error(`Error update TradeOrder by query:${query}: ${err.message}`);
     }
   }
 
@@ -474,7 +442,7 @@ class DBHelper {
         {},
       );
     } catch (err) {
-      getLogger().error(`Error update Topic by query:${query}: ${err.message}`);
+      getLogger().error(`Error cancelOrder by query:${query}: ${err.message}`);
     }
   }
 

@@ -6,6 +6,7 @@ const typeDefs = `
 
 type NewOrder {
   txid: String!
+  tokenAddress: String!
   txCanceled: String!
   txFulfilled: String!
   timeCanceled: String!
@@ -63,8 +64,20 @@ type FundRedeem {
   blockNum: Int
 }
 
+type Charts {
+  tokenAddress: String!
+  timeTable: String!
+  time: Int!
+  open: String!
+  high: String!
+  low: String!
+  close: String!
+  volume: Float!
+}
+
 type Trade {
   status: _TradeStatusType!
+  tokenAddress: String!
   type: String!
   txid: String!
   date: String!
@@ -158,6 +171,7 @@ type myOrderInfo {
 
 type activeOrderInfo {
   txid: String!
+  tokenAddress: String!
   txCanceled: String!
   txFulfilled: String!
   timeCanceled: String!
@@ -183,6 +197,7 @@ type activeOrderInfo {
 
 type fulfilledOrderInfo {
   txid: String!
+  tokenAddress: String!
   txCanceled: String!
   txFulfilled: String!
   timeCanceled: String!
@@ -208,6 +223,7 @@ type fulfilledOrderInfo {
 
 type canceledOrderInfo {
   txid: String!
+  tokenAddress: String!
   txCanceled: String!
   txFulfilled: String!
   timeCanceled: String!
@@ -232,6 +248,7 @@ type canceledOrderInfo {
 
 type buyOrderInfo {
   txid: String!
+  tokenAddress: String!
   txCanceled: String!
   txFulfilled: String!
   timeCanceled: String!
@@ -256,6 +273,7 @@ type buyOrderInfo {
 
 type sellOrderInfo {
   txid: String!
+  tokenAddress: String!
   txCanceled: String!
   txFulfilled: String!
   timeCanceled: String!
@@ -280,6 +298,7 @@ type sellOrderInfo {
 
 type selectedOrderInfo {
   txid: String!
+  tokenAddress: String!
   txCanceled: String!
   txFulfilled: String!
   timeCanceled: String!
@@ -305,6 +324,7 @@ type selectedOrderInfo {
 type myTradeInfo {
   status: _TradeStatusType!
   txid: String!
+  tokenAddress: String!
   date: String!
   from: String!
   to: String!
@@ -324,6 +344,7 @@ type myTradeInfo {
 type buyHistoryInfo {
   status: _TradeStatusType!
   txid: String!
+  tokenAddress: String!
   date: String!
   from: String!
   to: String!
@@ -343,6 +364,7 @@ type buyHistoryInfo {
 type sellHistoryInfo {
   status: _TradeStatusType!
   txid: String!
+  tokenAddress: String!
   date: String!
   from: String!
   to: String!
@@ -370,7 +392,19 @@ type marketInfo {
   orderCount: String!
 }
 
+type chartInfo {
+  tokenAddress: String!
+  timeTable: String!
+  time: Int!
+  open: String!
+  high: String!
+  low: String!
+  close: String!
+  volume: Float!
+}
+
 type Query {
+  allCharts(filter: ChartFilter, orderBy: [Order!], limit: Int, skip: Int): [Charts]!
   allFundRedeems(filter: FundRedeemFilter, orderBy: [Order!], limit: Int, skip: Int): [FundRedeem]!
   allMarkets(filter: MarketFilter, orderBy: [Order!], limit: Int, skip: Int): [Market]!
   allMarketImages(filter: MarketImageFilter, orderBy: [Order!], limit: Int, skip: Int): [MarketImage]!
@@ -391,6 +425,7 @@ type Query {
   buyOrderInfo: buyOrderInfo!
   selectedOrderInfo: selectedOrderInfo!
   marketInfo: marketInfo!
+  chartInfo: chartInfo!
 }
 
 input BaseCurrencyFilter {
@@ -398,6 +433,18 @@ input BaseCurrencyFilter {
   pair: String
   name: String
   address: String
+}
+
+input ChartFilter {
+  OR: [ChartFilter!]
+  tokenAddress: String
+  timeTable: String
+  time: Int
+  open: String
+  high: String
+  low: String
+  close: String
+  volume: Float
 }
 
 input FundRedeemFilter {
@@ -417,6 +464,7 @@ input FundRedeemFilter {
 input TradeFilter {
   OR: [TradeFilter!]
   status: _TradeStatusType
+  tokenAddress: String
   type: String
   txid: String
   from: String
@@ -436,6 +484,7 @@ input TradeFilter {
 input NewOrderFilter {
   OR: [NewOrderFilter!]
   txid: String
+  tokenAddress: String
   token: String
   tokenName: String
   orderType: String

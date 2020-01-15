@@ -42,6 +42,7 @@
     "restify-cors-middleware": "^1.1.0",
     "restify-router": "^0.5.0",
     "rweb3": "github:runebase/rweb3.js#v1.2.3",
+    "strip-hex-prefix": "^1.0.0",
     "subscriptions-transport-ws": "^0.9.16",
     "web3": "^1.2.4",
     "web3-utils": "^1.2.4",

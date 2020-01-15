@@ -80,9 +80,9 @@ export PATH=$PATH:/home/bago/.cargo/bin
 
 ```
 
-solar deploy radex/Radex.sol --qtum_rpc=http://user:pass@localhost:19432 --qtum_sender=5aeewynHSJoeaa86GPmWKeXorRvQfs2skv --optimize --env="testnet.exchange" --force
+solar deploy radex/Radex.sol --qtum_rpc=http://user:pass@localhost:19432 --qtum_sender=5ixQpcjtVtS2c6zWdsQbRZuPSBKZVa1dJQ --optimize --env="testnet.exchange" --force
 
-solar deploy RegisterTokens/TokenRegistry.sol --qtum_rpc=http://user:pass@localhost:19432 --qtum_sender=5aeewynHSJoeaa86GPmWKeXorRvQfs2skv --optimize --env="testnet.registery" --force
+solar deploy RegisterTokens/TokenRegistry.sol --qtum_rpc=http://user:pass@localhost:19432 --qtum_sender=5ixQpcjtVtS2c6zWdsQbRZuPSBKZVa1dJQ --optimize --env="testnet.registery" --force
 
 
 ```
