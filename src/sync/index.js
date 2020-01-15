@@ -53,32 +53,41 @@ looptimes['12h'] = 43200;
 looptimes['d'] = 86400;
 looptimes['w'] = 604800;
 
+const insertEmptyCandles = async (timeNow, t, address) => {
+    return new Promise(async (resolve) => {
+      const f = async () => {
+        const ohlc = await db.Charts.cfind({ tokenAddress: address, timeTable: t }).sort({ time: -1 }).limit(1).exec();
+        console.log('timeNow: ' + (timeNow - looptimes[t]));
+        console.log('ohlc[0].time: ' + ohlc[0].time);
 
-async function updateEmptyCandles(db) {
+        if (timeNow - looptimes[t] > ohlc[0].time) {
+          const ohlc_change = {
+            tokenAddress: address,
+            timeTable: t,
+            time: ohlc[0].time + looptimes[t],
+            open: ohlc[0].close,
+            high: ohlc[0].close,
+            low: ohlc[0].close,
+            close: ohlc[0].close,
+            volume: 0,
+          };
+          await db.Charts.insert(ohlc_change);
+          await f();
+        } else {
+          resolve();
+        }
+      }
+      await f();
+    });
+}
+
+const updateEmptyCandles = async (db) => {
   const markets = await db.Markets.find({});
-  let ohlc_change = {};
-  let ohlc;
+  const timeNow = parseInt(moment().unix());
 
   for (market of markets) {
     for (t of tables) {
-      ohlc = await db.Charts.cfind({ tokenAddress: market.address, timeTable: t }).sort({ time: -1 }).limit(1).exec();
-      console.log('moment().unix() + looptimes[t]: ' + (parseInt(moment().unix()) + looptimes[t]));
-      console.log('ohlc[0].time: ' + ohlc[0].time);
-      while ((parseInt(moment().unix()) + looptimes[t]) < ohlc[0].time) {
-        const ohlc_change = {
-          tokenAddress: market.address,
-          timeTable: t,
-          time: (parseInt(ohlc[0].time) + looptimes[t]),
-          open: ohlc[0].close,
-          high: ohlc[0].close,
-          low: ohlc[0].close,
-          close: ohlc[0].close,
-          volume: 0,
-        };
-        console.log(ohlc_change);
-        await db.Charts.insert(ohlc_change);
-        ohlc = await db.Charts.cfind({ tokenAddress: market.address, timetable: t }).sort({ time: -1 }).limit(1).exec();
-      }
+      await insertEmptyCandles(timeNow, t, market.address);
     }
   }
 }
@@ -875,41 +884,28 @@ async function addTrade(rawLog, blockNum, txid){
       if (await DBHelper.getCount(db.Charts, { tokenAddress: trade.tokenAddress, timeTable: t }) > 0) {
         let ohlc = await db.Charts.cfind({ tokenAddress: trade.tokenAddress, timeTable: t, time: { $lt: trade.time } }).sort({ time: -1 }).limit(1).exec();
         if (trade.time - looptimes[t] > ohlc[0].time) {
-          while (trade.time - looptimes[t] > ohlc[0].time) {
+          await insertEmptyCandles(trade.time, t, trade.tokenAddress).then(async () => {
+            ohlc = await db.Charts.cfind({ tokenAddress: trade.tokenAddress, timeTable: t, time: { $lt: trade.time } }).sort({ time: -1 }).limit(1).exec();
             ohlc_change = {
               tokenAddress: trade.tokenAddress,
               timeTable: t,
-              time: ohlc[0].time + looptimes[t],
-              open: ohlc[0].close,
-              close: ohlc[0].close,
-              high: ohlc[0].close,
-              low: ohlc[0].close,
-              volume: 0,
+              time: ohlc[0].time,
+              open: ohlc[0].open,
+              close: trade.price,
+              volume: ohlc[0].volume + parseInt(trade.amount),
             };
-
-            await db.Charts.insert(ohlc_change);
-            ohlc = await db.Charts.cfind({ tokenAddress: trade.tokenAddress, timeTable: t, time: { $lt: trade.time } }).sort({ time: -1 }).limit(1).exec();
-          }
-          ohlc_change = {
-            tokenAddress: trade.tokenAddress,
-            timeTable: t,
-            time: ohlc[0].time,
-            open: ohlc[0].close,
-            close: trade.price,
-            volume: 0 + parseInt(trade.amount),
-          };
-
-          if (trade.price > ohlc[0].high) {
-            ohlc_change.high = trade.price;
-          } else {
-            ohlc_change.high = ohlc[0].high;
-          }
-          if (trade.price < ohlc[0].low) {
-            ohlc_change.low = trade.price;
-          } else {
-            ohlc_change.low = ohlc[0].low;
-          }
-          await db.Charts.insert(ohlc_change);
+            if (trade.price > ohlc[0].high) {
+              ohlc_change.high = trade.price;
+            } else {
+              ohlc_change.high = ohlc[0].high;
+            }
+            if (trade.price < ohlc[0].low) {
+              ohlc_change.low = trade.price;
+            } else {
+              ohlc_change.low = ohlc[0].low;
+            }
+            await DBHelper.updateObjectByQuery(db.Charts, { time: ohlc[0].time, timeTable: t }, ohlc_change);
+          });
         } else {
           ohlc_change = {
             tokenAddress: trade.tokenAddress,
