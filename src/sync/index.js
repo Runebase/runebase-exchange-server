@@ -4,7 +4,7 @@ const fs = require('fs-extra');
 
 const _ = require('lodash');
 const pubsub = require('../pubsub');
-const { sendTradeInfo, sendFundRedeemInfo, sendSellHistoryInfo, sendBuyHistoryInfo, sendSellOrderInfo, sendBuyOrderInfo, sendActiveOrderInfo, sendCanceledOrderInfo, sendFulfilledOrderInfo } = require('../publisher');
+const { sendTradeInfo, sendFundRedeemInfo, sendSellHistoryInfo, sendBuyHistoryInfo, sendSellOrderInfo, sendBuyOrderInfo, sendActiveOrderInfo, sendCanceledOrderInfo, sendFulfilledOrderInfo, sendChartInfo } = require('../publisher');
 const { getLogger } = require('../utils/logger');
 //const { Utils } = require('rweb3');
 const moment = require('moment');
@@ -72,6 +72,7 @@ const insertEmptyCandles = async (timeNow, t, address) => {
             volume: 0,
           };
           await db.Charts.insert(ohlc_change);
+          sendChartInfo(ohlc_change.tokenAddress, ohlc_change.timeTable, ohlc_change.time, ohlc_change.open, ohlc_change.high, ohlc_change.low, ohlc_change.close, ohlc_change.volume);
           await f();
         } else {
           resolve();
@@ -218,7 +219,7 @@ async function sync(db) {
         }
         getLogger().debug('sleep');
         setTimeout(startSync, 5000);
-        setInterval(updateEmptyCandles, 100000, db);
+        setTimeout(updateEmptyCandles, 200000, db);
       // execute rpc batch by batch
     },
   );
@@ -905,6 +906,7 @@ async function addTrade(rawLog, blockNum, txid){
               ohlc_change.low = ohlc[0].low;
             }
             await DBHelper.updateObjectByQuery(db.Charts, { time: ohlc[0].time, timeTable: t }, ohlc_change);
+            sendChartInfo(ohlc_change.tokenAddress, ohlc_change.timeTable, ohlc_change.time, ohlc_change.open, ohlc_change.high, ohlc_change.low, ohlc_change.close, ohlc_change.volume);
           });
         } else {
           ohlc_change = {
@@ -925,15 +927,15 @@ async function addTrade(rawLog, blockNum, txid){
             ohlc_change.low = ohlc[0].low;
           }
           await DBHelper.updateObjectByQuery(db.Charts, { time: ohlc[0].time, timeTable: t }, ohlc_change);
-
+          sendChartInfo(ohlc_change.tokenAddress, ohlc_change.timeTable, ohlc_change.time, ohlc[0].open, ohlc_change.high, ohlc_change.low, ohlc_change.close, ohlc_change.volume);
         }
       }
     }
 
     // GraphQl push Subs
-    sendTradeInfo(trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
-    sendSellHistoryInfo(trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
-    sendBuyHistoryInfo(trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
+    sendTradeInfo(trade.tokenAddress, trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
+    sendSellHistoryInfo(trade.tokenAddress, trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
+    sendBuyHistoryInfo(trade.tokenAddress, trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
 
     getLogger().debug('Trade Inserted');
     return trade;

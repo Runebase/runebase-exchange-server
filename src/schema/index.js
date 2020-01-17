@@ -582,6 +582,7 @@ type Subscription {
   onSelectedOrderInfo : selectedOrderInfo
   onSellOrderInfo (orderType: String!, token: String!, status: String!) : sellOrderInfo
   onBuyOrderInfo (orderType: String!, token: String!, status: String!) : buyOrderInfo
+  onChartInfo (timeTable: String!, tokenAddress: String!) : chartInfo
 }
 
 input Order {

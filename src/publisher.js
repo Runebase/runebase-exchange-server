@@ -1,8 +1,9 @@
 const pubsub = require('./pubsub');
 
-module.exports.sendTradeInfo = function (status, txid, date, from, to, soldTokens, boughtTokens, token, tokenName, orderType, type, price, orderId, time, amount, blockNum) {
+module.exports.sendTradeInfo = function (tokenAddress, status, txid, date, from, to, soldTokens, boughtTokens, token, tokenName, orderType, type, price, orderId, time, amount, blockNum) {
   pubsub.publish('onMyTradeInfo', {
     onMyTradeInfo: {
+      tokenAddress,
       status,
       txid,
       date,
@@ -40,9 +41,10 @@ module.exports.sendFundRedeemInfo = function (txid, type, token, tokenName, stat
   });
 }
 
-module.exports.sendSellHistoryInfo = function (status, txid, date, from, to, soldTokens, boughtTokens, token, tokenName, orderType, type, price, orderId, time, amount, blockNum) {
+module.exports.sendSellHistoryInfo = function (tokenAddress, status, txid, date, from, to, soldTokens, boughtTokens, token, tokenName, orderType, type, price, orderId, time, amount, blockNum) {
   pubsub.publish('onSellHistoryInfo', {
     onSellHistoryInfo: {
+      tokenAddress,
       status,
       txid,
       date,
@@ -63,9 +65,10 @@ module.exports.sendSellHistoryInfo = function (status, txid, date, from, to, sol
   });
 }
 
-module.exports.sendBuyHistoryInfo = function (status, txid, date, from, to, soldTokens, boughtTokens, token, tokenName, orderType, type, price, orderId, time, amount, blockNum) {
+module.exports.sendBuyHistoryInfo = function (tokenAddress, status, txid, date, from, to, soldTokens, boughtTokens, token, tokenName, orderType, type, price, orderId, time, amount, blockNum) {
   pubsub.publish('onBuyHistoryInfo', {
     onBuyHistoryInfo: {
+      tokenAddress,
       status,
       txid,
       date,
@@ -203,6 +206,21 @@ module.exports.sendCanceledOrderInfo = function (txid, orderId, owner, token, to
       startAmount,
       blockNum,
       status,
+    },
+  });
+}
+
+module.exports.sendChartInfo = function (tokenAddress, timeTable, time, open, high, low, close, volume) {
+  pubsub.publish('onChartInfo', {
+    onChartInfo: {
+      tokenAddress,
+      timeTable,
+      time,
+      open,
+      high,
+      low,
+      close,
+      volume,
     },
   });
 }

@@ -251,15 +251,6 @@ async function startAPI() {
   syncRouter.applyRoutes(server);
   apiRouter.applyRoutes(server);
 
-  const blockchainDataPath = Utils.getDataDir();
-  const routerInstance = new Router();
-  routerInstance.get(/\/?.*/, restify.plugins.serveStatic({
-    directory: blockchainDataPath,
-    default: 'index.html'
-  }))
-  routerInstance.applyRoutes(server);
-
-
   server.listen(Config.PORT, () => {
     SubscriptionServer.create(
       { execute, subscribe, schema },

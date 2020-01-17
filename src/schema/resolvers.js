@@ -5,7 +5,7 @@ const BigNumber = require('bignumber.js');
 const { withFilter } = require('graphql-subscriptions');
 
 const pubsub = require('../pubsub');
-const { sendTradeInfo, sendFundRedeemInfo, sendSellHistoryInfo, sendBuyHistoryInfo, sendActiveOrderInfo } = require('../publisher');
+const { sendTradeInfo, sendFundRedeemInfo, sendSellHistoryInfo, sendBuyHistoryInfo, sendActiveOrderInfo, sendChartInfo } = require('../publisher');
 const { getLogger } = require('../utils/logger');
 const blockchain = require('../api/blockchain');
 const network = require('../api/network');
@@ -968,9 +968,9 @@ module.exports = {
         amount: xAmount,
         blockNum: 0,
       }
-      sendTradeInfo(trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
-      sendSellHistoryInfo(trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
-      sendBuyHistoryInfo(trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
+      sendTradeInfo(trade.tokenAddress, trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
+      sendSellHistoryInfo(trade.tokenAddress, trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
+      sendBuyHistoryInfo(trade.tokenAddress, trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
       await DBHelper.insertTopic(db.Trade, trade)
       return trade;
     },
@@ -992,7 +992,6 @@ module.exports = {
     },
     onFundRedeemInfo: {
       subscribe: withFilter(() => pubsub.asyncIterator('onFundRedeemInfo'), (payload, variables) => {
-        console.log('onFundRedeemInfo with filter');
         if (payload.onFundRedeemInfo.owner === variables.owner) {
           return true;
         }
@@ -1000,7 +999,6 @@ module.exports = {
     },
     onSellHistoryInfo: {
       subscribe: withFilter(() => pubsub.asyncIterator('onSellHistoryInfo'), (payload, variables) => {
-        console.log('onSellHistoryInfo with filter');
         if (payload.onSellHistoryInfo.token === variables.token && payload.onSellHistoryInfo.orderType === variables.orderType) {
           return true;
         }
@@ -1008,7 +1006,6 @@ module.exports = {
     },
     onBuyHistoryInfo: {
       subscribe: withFilter(() => pubsub.asyncIterator('onBuyHistoryInfo'), (payload, variables) => {
-        console.log('onBuyHistoryInfo with filter');
         if (payload.onBuyHistoryInfo.token === variables.token && payload.onBuyHistoryInfo.orderType === variables.orderType) {
           return true;
         }
@@ -1019,8 +1016,6 @@ module.exports = {
     },
     onActiveOrderInfo: {
       subscribe: withFilter(() => pubsub.asyncIterator('onActiveOrderInfo'), (payload, variables) => {
-        console.log('onActiveOrderInfo with filter');
-        console.log(payload);
         if (payload.onActiveOrderInfo.status === 'ACTIVE') {
           return true;
         }
@@ -1028,6 +1023,13 @@ module.exports = {
           return true;
         }
         if (payload.onActiveOrderInfo.status === 'PENDINGCANCEL') {
+          return true;
+        }
+      }),
+    },
+    onChartInfo: {
+      subscribe: withFilter(() => pubsub.asyncIterator('onChartInfo'), (payload, variables) => {
+        if (payload.onChartInfo.timeTable === variables.timeTable && payload.onChartInfo.tokenAddress === variables.tokenAddress) {
           return true;
         }
       }),
@@ -1041,8 +1043,6 @@ module.exports = {
     },
     onCanceledOrderInfo: {
       subscribe: withFilter(() => pubsub.asyncIterator('onCanceledOrderInfo'), (payload, variables) => {
-        console.log('onCanceledOrderInfo with filter');
-        console.log(payload);
         if (payload.onCanceledOrderInfo.status === variables.status) {
           return true;
         }
@@ -1050,7 +1050,6 @@ module.exports = {
     },
     onBuyOrderInfo: {
       subscribe: withFilter(() => pubsub.asyncIterator('onBuyOrderInfo'), (payload, variables) => {
-        console.log('onBuyOrderInfo with filter');
         if (payload.onBuyOrderInfo.token === variables.token && payload.onBuyOrderInfo.orderType === variables.orderType && payload.onBuyOrderInfo.status === variables.status) {
           return true;
         }
@@ -1058,7 +1057,6 @@ module.exports = {
     },
     onSellOrderInfo: {
       subscribe: withFilter(() => pubsub.asyncIterator('onSellOrderInfo'), (payload, variables) => {
-        console.log('onSellOrderInfo with filter');
         if (payload.onSellOrderInfo.token === variables.token && payload.onSellOrderInfo.orderType === variables.orderType && payload.onSellOrderInfo.status === variables.status) {
           return true;
         }
