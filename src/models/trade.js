@@ -13,6 +13,7 @@ class Trade {
       this.getOrder = getOrder;
       this.token = 'Unregistered';
       this.tokenName = 'Unregistered Token';
+      this.decimals = 0;
       this.decode();
     }
   }
@@ -36,6 +37,7 @@ class Trade {
       this.amount = this.boughtTokens;
     }
     this.tokenAddress = this.getOrder.tokenAddress;
+    this.decimals = this.getOrder.decimals;
   }
 
   translate() {
@@ -57,6 +59,7 @@ class Trade {
       tokenAddress: this.tokenAddress,
       amount: this.amount,
       blockNum: this.blockNum,
+      decimals: this.decimals,
     };
   }
 }

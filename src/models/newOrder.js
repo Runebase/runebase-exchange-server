@@ -19,6 +19,7 @@ class NewOrder {
       this.baseCurrencyAddress = baseCurrencyAddress;
       this.token = 'Unregistered';
       this.tokenName = 'Unregistered Token';
+      this.decimals = 0;
       this.decode();
     }
   }
@@ -32,6 +33,7 @@ class NewOrder {
     }
     for (let key in this.tokens){
       if (this.tokens[key]['address'] === this.sellToken || this.tokens[key]['address'] === this.buyToken) {
+        this.decimals = this.tokens[key]['decimals'];
         this.token = this.tokens[key]['market'];
         this.tokenName = this.tokens[key]['tokenName'];
       }
@@ -77,6 +79,7 @@ class NewOrder {
       amount: this.amount,
       startAmount: this.startAmount,
       blockNum: this.blockNum,
+      decimals: this.decimals,
     };
   }
 }

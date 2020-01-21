@@ -178,6 +178,7 @@ class DBHelper {
           $set: {
             token: topic.market,
             tokenName: topic.tokenName,
+            decimals: topic.decimals,
           },
         },
         { multi: true },

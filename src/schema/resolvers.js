@@ -699,7 +699,6 @@ module.exports = {
 
       if (token == MetaData['BaseCurrency']['Pair']) {
         try {
-          //tokenaddress = "0000000000000000000000000000000000000000";
           txid = await exchange.redeemExchange({
             exchangeAddress: MetaData['Exchange']['Address'],
             amount,
@@ -716,7 +715,6 @@ module.exports = {
       for(redeemExchangeToken in markets){
         if (token == markets[redeemExchangeToken]['market']) {
           try {
-            //tokenaddress = metaData.Tokens.PredictionToken.address;
             txid = await exchange.redeemExchange({
               exchangeAddress: MetaData['Exchange']['Address'],
               amount,
@@ -786,6 +784,7 @@ module.exports = {
       let txid;
       let sentTx;
       let tokenAddress;
+      let decimals;
       const priceFract = math.fraction(price);
       const priceFractN = priceFract.n;
       const priceFractD = priceFract.d;
@@ -794,8 +793,9 @@ module.exports = {
         if (token == markets[TokenName]['market']) {
           try {
             tokenAddress = markets[TokenName]['address'];
+            decimals = markets[TokenName]['decimals'];
           } catch (err) {
-            getLogger().error(`Error calling MetaData['Tokens'][${TokenName}]['Address']: ${err.message}`);
+            getLogger().error(`Error calling MetaData['Tokens'][${TokenName}]: ${err.message}`);
             throw err;
           }
         }
@@ -855,6 +855,7 @@ module.exports = {
         buyToken,
         priceMul: priceFractN,
         priceDiv: priceFractD,
+        decimals,
       };
       await DBHelper.insertTopic(db.NewOrder, tx);
       sendActiveOrderInfo(tx.txid, tx.orderId, tx.owner, tx.token, tx.tokenName, tx.price, tx.type, tx.orderType, tx.sellToken, tx.buyToken, tx.priceMul, tx.priceDiv, tx.time, tx.amount, tx.startAmount, tx.blockNum, tx.status);
@@ -973,6 +974,7 @@ module.exports = {
         token: getOrder.token,
         amount: xAmount,
         blockNum: 0,
+        decimals: getOrder.decimals,
       }
       sendTradeInfo(trade.tokenAddress, trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
       sendSellHistoryInfo(trade.tokenAddress, trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);

@@ -27,6 +27,7 @@ type NewOrder {
   amount: String!
   startAmount: String!
   blockNum: Int
+  decimals: Int!
 }
 
 type Market {
@@ -38,6 +39,7 @@ type Market {
   address: String!
   abi: String!
   orderCount: String!
+  decimals: Int!
 }
 
 type BaseCurrency {
@@ -97,6 +99,7 @@ type Trade {
   gasLimit: String
   gasPrice: String
   gasUsed: Int
+  decimals: Int!
 }
 
 type Transaction {
