@@ -604,6 +604,7 @@ module.exports = {
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
       let sentTx;
+      let pendingAmount;
 
       if (token == MetaData['BaseCurrency']['Pair']) {
         try {
@@ -638,6 +639,11 @@ module.exports = {
         }
       }
 
+      if (token === MetaData['BaseCurrency']['Pair']) {
+        pendingAmount = amount;
+      } else {
+        pendingAmount = parseFloat(new BigNumber(amount).dividedBy(SATOSHI_CONVERSION));
+      }
       getLogger().debug('Token Deposit' + token);
       getLogger().debug('New Big Number Deposit: ' + new BigNumber(amount).dividedBy(SATOSHI_CONVERSION).toString());
       // Insert Transaction
@@ -658,7 +664,7 @@ module.exports = {
         receiverAddress,
         token,
         tokenName: token,
-        amount: new BigNumber(amount).dividedBy(SATOSHI_CONVERSION).toString(),
+        amount: pendingAmount,
       };
       sendFundRedeemInfo(
         deposit.txid,

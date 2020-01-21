@@ -60,7 +60,7 @@ type FundRedeem {
   owner: String!
   time: Int!
   date: String!
-  amount: String!
+  amount: Float!
   blockNum: Int
 }
 
@@ -140,163 +140,11 @@ type fundRedeemInfo {
   owner: String!
   time: Int!
   date: String!
-  amount: String!
+  amount: Float!
   blockNum: Int
 }
 
 type myOrderInfo {
-  txid: String!
-  txCanceled: String!
-  txFulfilled: String!
-  timeCanceled: String!
-  timeFulfilled: String!
-  orderId: String!
-  token: String!
-  tokenName: String!
-  orderType: String!
-  type: String!
-  price: String!
-  status: _OrderStatusType!
-  owner: String!
-  sellToken: String!
-  buyToken: String!
-  priceMul: String!
-  priceDiv: String!
-  time: String!
-  amount: String!
-  startAmount: String!
-  blockNum: Int
-}
-
-
-type activeOrderInfo {
-  txid: String!
-  tokenAddress: String!
-  txCanceled: String!
-  txFulfilled: String!
-  timeCanceled: String!
-  timeFulfilled: String!
-  orderId: String!
-  token: String!
-  tokenName: String!
-  orderType: String!
-  type: String!
-  price: String!
-  status: _OrderStatusType!
-  owner: String!
-  sellToken: String!
-  buyToken: String!
-  priceMul: String!
-  priceDiv: String!
-  time: String!
-  amount: String!
-  startAmount: String!
-  blockNum: Int
-}
-
-
-type fulfilledOrderInfo {
-  txid: String!
-  tokenAddress: String!
-  txCanceled: String!
-  txFulfilled: String!
-  timeCanceled: String!
-  timeFulfilled: String!
-  orderId: String!
-  token: String!
-  tokenName: String!
-  orderType: String!
-  type: String!
-  price: String!
-  status: _OrderStatusType!
-  owner: String!
-  sellToken: String!
-  buyToken: String!
-  priceMul: String!
-  priceDiv: String!
-  time: String!
-  amount: String!
-  startAmount: String!
-  blockNum: Int
-}
-
-
-type canceledOrderInfo {
-  txid: String!
-  tokenAddress: String!
-  txCanceled: String!
-  txFulfilled: String!
-  timeCanceled: String!
-  timeFulfilled: String!
-  orderId: String!
-  token: String!
-  tokenName: String!
-  orderType: String!
-  type: String!
-  price: String!
-  status: _OrderStatusType!
-  owner: String!
-  sellToken: String!
-  buyToken: String!
-  priceMul: String!
-  priceDiv: String!
-  time: String!
-  amount: String!
-  startAmount: String!
-  blockNum: Int
-}
-
-type buyOrderInfo {
-  txid: String!
-  tokenAddress: String!
-  txCanceled: String!
-  txFulfilled: String!
-  timeCanceled: String!
-  timeFulfilled: String!
-  orderId: String!
-  token: String!
-  tokenName: String!
-  orderType: String!
-  type: String!
-  price: String!
-  status: _OrderStatusType!
-  owner: String!
-  sellToken: String!
-  buyToken: String!
-  priceMul: String!
-  priceDiv: String!
-  time: String!
-  amount: String!
-  startAmount: String!
-  blockNum: Int
-}
-
-type sellOrderInfo {
-  txid: String!
-  tokenAddress: String!
-  txCanceled: String!
-  txFulfilled: String!
-  timeCanceled: String!
-  timeFulfilled: String!
-  orderId: String!
-  token: String!
-  tokenName: String!
-  orderType: String!
-  type: String!
-  price: String!
-  status: _OrderStatusType!
-  owner: String!
-  sellToken: String!
-  buyToken: String!
-  priceMul: String!
-  priceDiv: String!
-  time: String!
-  amount: String!
-  startAmount: String!
-  blockNum: Int
-}
-
-type selectedOrderInfo {
   txid: String!
   tokenAddress: String!
   txCanceled: String!
@@ -322,46 +170,6 @@ type selectedOrderInfo {
 }
 
 type myTradeInfo {
-  status: _TradeStatusType!
-  txid: String!
-  tokenAddress: String!
-  date: String!
-  from: String!
-  to: String!
-  soldTokens: String!
-  boughtTokens: String!
-  token: String!
-  tokenName: String!
-  orderType: String!
-  type: String!
-  price: String!
-  orderId: String!
-  time: Int
-  amount: String!
-  blockNum: Int
-}
-
-type buyHistoryInfo {
-  status: _TradeStatusType!
-  txid: String!
-  tokenAddress: String!
-  date: String!
-  from: String!
-  to: String!
-  soldTokens: String!
-  boughtTokens: String!
-  token: String!
-  tokenName: String!
-  orderType: String!
-  type: String!
-  price: String!
-  orderId: String!
-  time: Int
-  amount: String!
-  blockNum: Int
-}
-
-type sellHistoryInfo {
   status: _TradeStatusType!
   txid: String!
   tokenAddress: String!
@@ -415,15 +223,15 @@ type Query {
   syncInfo(includeBalance: Boolean): syncInfo!
   fundRedeemInfo: fundRedeemInfo!
   myOrderInfo: myOrderInfo!
-  activeOrderInfo: activeOrderInfo!
-  fulfilledOrderInfo: fulfilledOrderInfo!
-  canceledOrderInfo: canceledOrderInfo!
-  sellOrderInfo: sellOrderInfo!
+  activeOrderInfo: myOrderInfo!
+  fulfilledOrderInfo: myOrderInfo!
+  canceledOrderInfo: myOrderInfo!
+  sellOrderInfo: myOrderInfo!
   myTradeInfo: myTradeInfo!
-  buyHistoryInfo: buyHistoryInfo!
-  sellHistoryInfo: sellHistoryInfo!
-  buyOrderInfo: buyOrderInfo!
-  selectedOrderInfo: selectedOrderInfo!
+  buyHistoryInfo: myTradeInfo!
+  sellHistoryInfo: myTradeInfo!
+  buyOrderInfo: myOrderInfo!
+  selectedOrderInfo: myOrderInfo!
   marketInfo: marketInfo!
   chartInfo: chartInfo!
 }
@@ -457,7 +265,7 @@ input FundRedeemFilter {
   owner: String
   time: Int
   date: String
-  amount: String
+  amount: Float
   blockNum: Int
 }
 
@@ -572,16 +380,15 @@ type Mutation {
 type Subscription {
   onSyncInfo : syncInfo
   onFundRedeemInfo(owner: String!) : fundRedeemInfo
-  onMyOrderInfo : myOrderInfo
-  onCanceledOrderInfo (status: String!) : canceledOrderInfo
-  onActiveOrderInfo : activeOrderInfo
-  onFulfilledOrderInfo (status: String!) : fulfilledOrderInfo
+  onCanceledOrderInfo (status: String!) : myOrderInfo
+  onActiveOrderInfo : myOrderInfo
+  onFulfilledOrderInfo (status: String!) : myOrderInfo
   onMyTradeInfo(from: String!, to: String!) : myTradeInfo
-  onBuyHistoryInfo (token: String!, orderType: String!) : buyHistoryInfo
-  onSellHistoryInfo (token: String!, orderType: String!) : sellHistoryInfo
-  onSelectedOrderInfo : selectedOrderInfo
-  onSellOrderInfo (orderType: String!, token: String!, status: String!) : sellOrderInfo
-  onBuyOrderInfo (orderType: String!, token: String!, status: String!) : buyOrderInfo
+  onBuyHistoryInfo (token: String!, orderType: String!) : myTradeInfo
+  onSellHistoryInfo (token: String!, orderType: String!) : myTradeInfo
+  onSelectedOrderInfo : myOrderInfo
+  onSellOrderInfo (orderType: String!, token: String!, status: String!) : myOrderInfo
+  onBuyOrderInfo (orderType: String!, token: String!, status: String!) : myOrderInfo
   onChartInfo (timeTable: String!, tokenAddress: String!) : chartInfo
 }
 
