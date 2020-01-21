@@ -6,7 +6,7 @@ const typeDefs = `
 
 type NewOrder {
   txid: String!
-  tokenAddress: String!
+  tokenAddress: String
   txCanceled: String!
   txFulfilled: String!
   timeCanceled: String!
@@ -64,6 +64,7 @@ type FundRedeem {
   blockNum: Int
 }
 
+
 type Charts {
   tokenAddress: String!
   timeTable: String!
@@ -93,11 +94,10 @@ type Trade {
   time: Int
   amount: String!
   blockNum: Int
-  gasLimit: String!
-  gasPrice: String!
+  gasLimit: String
+  gasPrice: String
   gasUsed: Int
 }
-
 
 type Transaction {
   type: _TransactionType!
@@ -131,85 +131,6 @@ type syncInfo {
   addressBalances: [AddressBalance]
 }
 
-type fundRedeemInfo {
-  txid: String!
-  type: String!
-  token: String!
-  tokenName: String!
-  status: _FundRedeemStatusType!
-  owner: String!
-  time: Int!
-  date: String!
-  amount: Float!
-  blockNum: Int
-}
-
-type myOrderInfo {
-  txid: String!
-  tokenAddress: String!
-  txCanceled: String!
-  txFulfilled: String!
-  timeCanceled: String!
-  timeFulfilled: String!
-  orderId: String!
-  token: String!
-  tokenName: String!
-  orderType: String!
-  type: String!
-  price: String!
-  status: _OrderStatusType!
-  owner: String!
-  sellToken: String!
-  buyToken: String!
-  priceMul: String!
-  priceDiv: String!
-  time: String!
-  amount: String!
-  startAmount: String!
-  blockNum: Int
-}
-
-type myTradeInfo {
-  status: _TradeStatusType!
-  txid: String!
-  tokenAddress: String!
-  date: String!
-  from: String!
-  to: String!
-  soldTokens: String!
-  boughtTokens: String!
-  token: String!
-  tokenName: String!
-  orderType: String!
-  type: String!
-  price: String!
-  orderId: String!
-  time: Int
-  amount: String!
-  blockNum: Int
-}
-
-type marketInfo {
-  market: String!
-  tokenName: String!
-  price: String!
-  change: String!
-  volume: String!
-  address: String!
-  abi: String!
-  orderCount: String!
-}
-
-type chartInfo {
-  tokenAddress: String!
-  timeTable: String!
-  time: Int!
-  open: String!
-  high: String!
-  low: String!
-  close: String!
-  volume: Float!
-}
 
 type Query {
   allCharts(filter: ChartFilter, orderBy: [Order!], limit: Int, skip: Int): [Charts]!
@@ -221,19 +142,21 @@ type Query {
   allTransactions(filter: TransactionFilter, orderBy: [Order!], limit: Int, skip: Int): [Transaction]!
   getBaseCurrency(filter: BaseCurrencyFilter, orderBy: [Order!], limit: Int, skip: Int): [BaseCurrency]!
   syncInfo(includeBalance: Boolean): syncInfo!
-  fundRedeemInfo: fundRedeemInfo!
-  myOrderInfo: myOrderInfo!
-  activeOrderInfo: myOrderInfo!
-  fulfilledOrderInfo: myOrderInfo!
-  canceledOrderInfo: myOrderInfo!
-  sellOrderInfo: myOrderInfo!
-  myTradeInfo: myTradeInfo!
-  buyHistoryInfo: myTradeInfo!
-  sellHistoryInfo: myTradeInfo!
-  buyOrderInfo: myOrderInfo!
-  selectedOrderInfo: myOrderInfo!
-  marketInfo: marketInfo!
-  chartInfo: chartInfo!
+}
+
+type Subscription {
+  onSyncInfo : syncInfo
+  onFundRedeemInfo(owner: String!) : FundRedeem
+  onCanceledOrderInfo (status: String!) : NewOrder
+  onActiveOrderInfo : NewOrder
+  onFulfilledOrderInfo (status: String!) : NewOrder
+  onMyTradeInfo(from: String!, to: String!) : Trade
+  onBuyHistoryInfo (token: String!, orderType: String!) : Trade
+  onSellHistoryInfo (token: String!, orderType: String!) : Trade
+  onSelectedOrderInfo : NewOrder
+  onSellOrderInfo (orderType: String!, token: String!, status: String!) : NewOrder
+  onBuyOrderInfo (orderType: String!, token: String!, status: String!) : NewOrder
+  onChartInfo (timeTable: String!, tokenAddress: String!) : Charts
 }
 
 input BaseCurrencyFilter {
@@ -375,21 +298,6 @@ type Mutation {
     exchangeAmount: String!
   ): Transaction
 
-}
-
-type Subscription {
-  onSyncInfo : syncInfo
-  onFundRedeemInfo(owner: String!) : fundRedeemInfo
-  onCanceledOrderInfo (status: String!) : myOrderInfo
-  onActiveOrderInfo : myOrderInfo
-  onFulfilledOrderInfo (status: String!) : myOrderInfo
-  onMyTradeInfo(from: String!, to: String!) : myTradeInfo
-  onBuyHistoryInfo (token: String!, orderType: String!) : myTradeInfo
-  onSellHistoryInfo (token: String!, orderType: String!) : myTradeInfo
-  onSelectedOrderInfo : myOrderInfo
-  onSellOrderInfo (orderType: String!, token: String!, status: String!) : myOrderInfo
-  onBuyOrderInfo (orderType: String!, token: String!, status: String!) : myOrderInfo
-  onChartInfo (timeTable: String!, tokenAddress: String!) : chartInfo
 }
 
 input Order {

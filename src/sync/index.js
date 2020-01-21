@@ -57,8 +57,8 @@ const insertEmptyCandles = async (timeNow, t, address) => {
     return new Promise(async (resolve) => {
       const f = async () => {
         const ohlc = await db.Charts.cfind({ tokenAddress: address, timeTable: t }).sort({ time: -1 }).limit(1).exec();
-        console.log('timeNow: ' + (timeNow - looptimes[t]));
-        console.log('ohlc[0].time: ' + ohlc[0].time);
+        // console.log('timeNow: ' + (timeNow - looptimes[t]));
+        // console.log('ohlc[0].time: ' + ohlc[0].time);
 
         if (timeNow - looptimes[t] > ohlc[0].time) {
           const ohlc_change = {
