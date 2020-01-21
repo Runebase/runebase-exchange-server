@@ -858,7 +858,7 @@ module.exports = {
         decimals,
       };
       await DBHelper.insertTopic(db.NewOrder, tx);
-      sendActiveOrderInfo(tx.txid, tx.orderId, tx.owner, tx.token, tx.tokenName, tx.price, tx.type, tx.orderType, tx.sellToken, tx.buyToken, tx.priceMul, tx.priceDiv, tx.time, tx.amount, tx.startAmount, tx.blockNum, tx.status);
+      sendActiveOrderInfo(tx.txid, tx.orderId, tx.owner, tx.token, tx.tokenName, tx.price, tx.type, tx.orderType, tx.sellToken, tx.buyToken, tx.priceMul, tx.priceDiv, tx.time, tx.amount, tx.startAmount, tx.blockNum, tx.status, tx.decimals);
       return tx;
     },
 
@@ -904,7 +904,7 @@ module.exports = {
       };
       await DBHelper.cancelOrderByQuery(db.NewOrder, { orderId }, NewOrder);
       const getOrder = await DBHelper.findOne(db.NewOrder, { orderId });
-      sendActiveOrderInfo(getOrder.txid, getOrder.orderId, getOrder.owner, getOrder.token, getOrder.tokenName, getOrder.price, getOrder.type, getOrder.orderType, getOrder.sellToken, getOrder.buyToken, getOrder.priceMul, getOrder.priceDiv, getOrder.time, getOrder.amount, getOrder.startAmount, getOrder.blockNum, getOrder.status);
+      sendActiveOrderInfo(getOrder.txid, getOrder.orderId, getOrder.owner, getOrder.token, getOrder.tokenName, getOrder.price, getOrder.type, getOrder.orderType, getOrder.sellToken, getOrder.buyToken, getOrder.priceMul, getOrder.priceDiv, getOrder.time, getOrder.amount, getOrder.startAmount, getOrder.blockNum, getOrder.status, getOrder.decimals);
       return NewOrder;
     },
 
@@ -976,9 +976,9 @@ module.exports = {
         blockNum: 0,
         decimals: getOrder.decimals,
       }
-      sendTradeInfo(trade.tokenAddress, trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
-      sendSellHistoryInfo(trade.tokenAddress, trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
-      sendBuyHistoryInfo(trade.tokenAddress, trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
+      sendTradeInfo(trade.tokenAddress, trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum, trade.decimals);
+      sendSellHistoryInfo(trade.tokenAddress, trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum, trade.decimals);
+      sendBuyHistoryInfo(trade.tokenAddress, trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum, trade.decimals);
       await DBHelper.insertTopic(db.Trade, trade)
       return trade;
     },

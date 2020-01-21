@@ -728,9 +728,9 @@ async function syncNewOrder(db, startBlock, endBlock, removeHexPrefix) {
             } else {
               DBHelper.insertTopic(db.NewOrder, newOrder);
             }
-            sendSellOrderInfo(newOrder.txid, newOrder.orderId, newOrder.owner, newOrder.token, newOrder.tokenName, newOrder.price, newOrder.type, newOrder.orderType, newOrder.sellToken, newOrder.buyToken, newOrder.priceMul, newOrder.priceDiv, newOrder.time, newOrder.amount, newOrder.startAmount, newOrder.blockNum, newOrder.status);
-            sendBuyOrderInfo(newOrder.txid, newOrder.orderId, newOrder.owner, newOrder.token, newOrder.tokenName, newOrder.price, newOrder.type, newOrder.orderType, newOrder.sellToken, newOrder.buyToken, newOrder.priceMul, newOrder.priceDiv, newOrder.time, newOrder.amount, newOrder.startAmount, newOrder.blockNum, newOrder.status);
-            sendActiveOrderInfo(newOrder.txid, newOrder.orderId, newOrder.owner, newOrder.token, newOrder.tokenName, newOrder.price, newOrder.type, newOrder.orderType, newOrder.sellToken, newOrder.buyToken, newOrder.priceMul, newOrder.priceDiv, newOrder.time, newOrder.amount, newOrder.startAmount, newOrder.blockNum, newOrder.status);
+            sendSellOrderInfo(newOrder.txid, newOrder.orderId, newOrder.owner, newOrder.token, newOrder.tokenName, newOrder.price, newOrder.type, newOrder.orderType, newOrder.sellToken, newOrder.buyToken, newOrder.priceMul, newOrder.priceDiv, newOrder.time, newOrder.amount, newOrder.startAmount, newOrder.blockNum, newOrder.status, newOrder.decimals);
+            sendBuyOrderInfo(newOrder.txid, newOrder.orderId, newOrder.owner, newOrder.token, newOrder.tokenName, newOrder.price, newOrder.type, newOrder.orderType, newOrder.sellToken, newOrder.buyToken, newOrder.priceMul, newOrder.priceDiv, newOrder.time, newOrder.amount, newOrder.startAmount, newOrder.blockNum, newOrder.status, newOrder.decimals);
+            sendActiveOrderInfo(newOrder.txid, newOrder.orderId, newOrder.owner, newOrder.token, newOrder.tokenName, newOrder.price, newOrder.type, newOrder.orderType, newOrder.sellToken, newOrder.buyToken, newOrder.priceMul, newOrder.priceDiv, newOrder.time, newOrder.amount, newOrder.startAmount, newOrder.blockNum, newOrder.status, newOrder.decimals);
 
             resolve();
           } catch (err) {
@@ -777,7 +777,7 @@ async function syncOrderCancelled(db, startBlock, endBlock, removeHexPrefix) {
             const cancelOrder = new CancelOrder(blockNum, txid, OutputBytecode).translate();
             const orderId = cancelOrder.orderId;
             await DBHelper.updateCanceledOrdersByQuery(db.NewOrder, { orderId }, cancelOrder);
-            sendCanceledOrderInfo(cancelOrder.txid, cancelOrder.orderId, cancelOrder.owner, cancelOrder.token, cancelOrder.tokenName, cancelOrder.price, cancelOrder.type, cancelOrder.orderType, cancelOrder.sellToken, cancelOrder.buyToken, cancelOrder.priceMul, cancelOrder.priceDiv, cancelOrder.time, cancelOrder.amount, cancelOrder.startAmount, cancelOrder.blockNum, cancelOrder.status);
+            sendCanceledOrderInfo(cancelOrder.txid, cancelOrder.orderId, cancelOrder.owner, cancelOrder.token, cancelOrder.tokenName, cancelOrder.price, cancelOrder.type, cancelOrder.orderType, cancelOrder.sellToken, cancelOrder.buyToken, cancelOrder.priceMul, cancelOrder.priceDiv, cancelOrder.time, cancelOrder.amount, cancelOrder.startAmount, cancelOrder.blockNum, cancelOrder.status, cancelOrder.decimals);
             resolve();
           } catch (err) {
             getLogger().error(`ERROR: ${err.message}`);
@@ -826,7 +826,7 @@ async function syncOrderFulfilled(db, startBlock, endBlock, removeHexPrefix) {
               await DBHelper.updateFulfilledOrdersByQuery(db.NewOrder, { orderId }, fulfillOrder);
               //await DBHelper.removeOrdersByQuery(db.NewOrder, { orderId: fulfillOrder.orderId });
               const getOrder = await DBHelper.findOne(db.NewOrder, { orderId });
-              sendFulfilledOrderInfo(getOrder.txid, getOrder.orderId, getOrder.owner, getOrder.token, getOrder.tokenName, getOrder.price, getOrder.type, getOrder.orderType, getOrder.sellToken, getOrder.buyToken, getOrder.priceMul, getOrder.priceDiv, getOrder.time, getOrder.amount, getOrder.startAmount, getOrder.blockNum, getOrder.status);
+              sendFulfilledOrderInfo(getOrder.txid, getOrder.orderId, getOrder.owner, getOrder.token, getOrder.tokenName, getOrder.price, getOrder.type, getOrder.orderType, getOrder.sellToken, getOrder.buyToken, getOrder.priceMul, getOrder.priceDiv, getOrder.time, getOrder.amount, getOrder.startAmount, getOrder.blockNum, getOrder.status, getOrder.decimals);
               resolve();
             } catch (err) {
               getLogger().error(`ERROR: ${err.message}`);
@@ -933,9 +933,9 @@ async function addTrade(rawLog, blockNum, txid){
     }
 
     // GraphQl push Subs
-    sendTradeInfo(trade.tokenAddress, trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
-    sendSellHistoryInfo(trade.tokenAddress, trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
-    sendBuyHistoryInfo(trade.tokenAddress, trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum);
+    sendTradeInfo(trade.tokenAddress, trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum, trade.decimals);
+    sendSellHistoryInfo(trade.tokenAddress, trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum, trade.decimals);
+    sendBuyHistoryInfo(trade.tokenAddress, trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum, trade.decimals);
 
     getLogger().debug('Trade Inserted');
     return trade;
