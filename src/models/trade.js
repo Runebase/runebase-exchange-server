@@ -19,7 +19,6 @@ class Trade {
   }
 
   decode() {
-    this.date = new Date(this.rawLog._time.toString(10)*1000);
     this.orderId = this.rawLog._orderId.toString(10);
     this.time = Number(this.rawLog._time.toString(10));
     this.from = this.rawLog._from.toString().substring(2);
@@ -42,7 +41,6 @@ class Trade {
 
   translate() {
     return {
-      date: this.date,
       type: this.orderType,
       txid: this.txid,
       status: 'CONFIRMED',

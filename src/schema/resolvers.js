@@ -15,7 +15,7 @@ const { Config, getContractMetadata } = require('../config');
 const { db, DBHelper } = require('../db');
 const { txState, phase, orderState, SATOSHI_CONVERSION } = require('../constants');
 const { calculateSyncPercent, getAddressBalances, getExchangeBalances } = require('../sync');
-const Utils = require('../utils');
+const { decimalToSatoshi, satoshiToDecimal } = require('../utils');
 const exchange = require('../api/exchange');
 const { getInstance } = require('../rclient');
 
@@ -234,9 +234,9 @@ function buildMarketFilters({
 }
 
 function buildTradeFilters({
-  OR = [], txid, tokenAddress, type, status, date, from, to, soldTokens, boughtTokens, tokenName, token, orderType, price, orderId, time, amount, blockNum
+  OR = [], txid, tokenAddress, type, status, from, to, soldTokens, boughtTokens, tokenName, token, orderType, price, orderId, time, amount, blockNum
 }) {
-  const filter = (txid || tokenAddress || type || status || date || from || to || soldTokens || boughtTokens || tokenName || token || orderType || price || orderId  || time || amount || blockNum) ? {} : null;
+  const filter = (txid || tokenAddress || type || status || from || to || soldTokens || boughtTokens || tokenName || token || orderType || price || orderId  || time || amount || blockNum) ? {} : null;
 
   if (txid) {
     filter.txid = txid;
@@ -252,10 +252,6 @@ function buildTradeFilters({
 
   if (status) {
     filter.status = status;
-  }
-
-  if (date) {
-    filter.date = date;
   }
 
   if (from) {
@@ -313,9 +309,9 @@ function buildTradeFilters({
 }
 
 function buildFundRedeemFilters({
-  OR = [], txid, type, token, tokenName, status, owner, time, date, amount, blockNum
+  OR = [], txid, type, token, tokenName, status, owner, time, amount, blockNum
 }) {
-  const filter = (txid || type || token || tokenName || status || owner || time || date || amount || blockNum) ? {} : null;
+  const filter = (txid || type || token || tokenName || status || owner || time || amount || blockNum) ? {} : null;
 
   if (txid) {
     filter.txid = txid;
@@ -343,10 +339,6 @@ function buildFundRedeemFilters({
 
   if (time) {
     filter.time = time;
-  }
-
-  if (date) {
-    filter.date = date;
   }
 
   if (amount) {
@@ -659,7 +651,6 @@ module.exports = {
         gasPrice: gasPrice.toFixed(8),
         time: moment().unix(),
         createdTime: moment().unix(),
-        date: new Date(moment().unix()*1000),
         owner: senderAddress,
         receiverAddress,
         token,
@@ -674,7 +665,6 @@ module.exports = {
         deposit.status,
         deposit.owner,
         deposit.time,
-        deposit.date,
         deposit.amount,
         deposit.blockNum
       );
@@ -744,7 +734,6 @@ module.exports = {
         gasPrice: gasPrice.toFixed(8),
         time: moment().unix(),
         createdTime: moment().unix(),
-        date: new Date(moment().unix()*1000),
         owner: senderAddress,
         receiverAddress,
         token,
@@ -760,7 +749,6 @@ module.exports = {
         withdrawal.status,
         withdrawal.owner,
         withdrawal.time,
-        withdrawal.date,
         withdrawal.amount,
         withdrawal.blockNum
       );
@@ -938,25 +926,21 @@ module.exports = {
       const gasPrice = sentTx ? sentTx.args.gasPrice : Config.DEFAULT_GAS_PRICE;
       const getOrder = await DBHelper.findOne(db.NewOrder, { orderId });
 
-      let xPrice;
-      let xAmount;
-      if (getOrder.orderType == 'SELLORDER') {
-        xPrice = getOrder.price;
-        xAmount = exchangeAmount;
-      }
-      if (getOrder.orderType == 'BUYORDER') {
-        xPrice = (getOrder.price / exchangeAmount) * 1e8;
-        xAmount = exchangeAmount * getOrder.price;
-      }
+
+      // const satoshiPrice = await decimalToSatoshi(getOrder.price, 8);
+      // const runesAmountWithFloatingPoint = await satoshiToDecimal((exchangeAmount * satoshiPrice), 8)
+      // const runesAmount = parseFloat(runesAmountWithFloatingPoint).toFixed(0);
+      // ^ deconstructed
+      const runesAmount = parseFloat(await satoshiToDecimal(((exchangeAmount) * (await decimalToSatoshi(getOrder.price, 8))), 8)).toFixed(0);
+      console.log(runesAmount);
+
       const trade = {
-        date: new Date(moment().unix()*1000),
         tokenAddress: getOrder.tokenAddress,
         type: getOrder.orderType,
         txid,
         type: 'EXECUTEORDER',
         status: 'PENDING',
         version,
-        exchangeAmount,
         gasLimit: gasLimit.toString(10),
         gasPrice: gasPrice.toFixed(8),
         createdTime: moment().unix(),
@@ -966,19 +950,19 @@ module.exports = {
         time: moment().unix(),
         from: senderAddress,
         to: getOrder.owner,
-        soldTokens: '',
-        boughtTokens: '',
-        price: xPrice,
+        soldTokens: exchangeAmount,
+        boughtTokens: runesAmount,
+        price: getOrder.price,
         orderType: getOrder.orderType,
         tokenName: getOrder.tokenName,
         token: getOrder.token,
-        amount: xAmount,
+        amount: exchangeAmount,
         blockNum: 0,
         decimals: getOrder.decimals,
       }
-      sendTradeInfo(trade.tokenAddress, trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum, trade.decimals);
-      sendSellHistoryInfo(trade.tokenAddress, trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum, trade.decimals);
-      sendBuyHistoryInfo(trade.tokenAddress, trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum, trade.decimals);
+      sendTradeInfo(trade.tokenAddress, trade.status, trade.txid, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum, trade.decimals);
+      sendSellHistoryInfo(trade.tokenAddress, trade.status, trade.txid, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum, trade.decimals);
+      sendBuyHistoryInfo(trade.tokenAddress, trade.status, trade.txid, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum, trade.decimals);
       await DBHelper.insertTopic(db.Trade, trade)
       return trade;
     },

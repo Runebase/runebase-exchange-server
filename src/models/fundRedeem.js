@@ -25,7 +25,6 @@ class NewOrder {
     this.owner = this.rawLog._owner.substring(2);
     this.amount =  new BigNumber(this.rawLog._amount).dividedBy(SATOSHI_CONVERSION).toString(10);
     this.time = this.rawLog._time.toString(10);
-    this.date = new Date(this.rawLog._time.toString(10)*1000);
     if (this.tokenAddress === this.baseCurrency['Address']) {
       console.log('DEPOSIT/WITHDRAW RUNES');
       this.token = this.baseCurrency['Pair'];
@@ -56,7 +55,6 @@ class NewOrder {
       status: 'CONFIRMED',
       owner: Decoder.toRunebaseAddress(this.owner, isMainnet()),
       time: this.time,
-      date: this.date,
       amount: this.amount,
       blockNum: this.blockNum,
     };

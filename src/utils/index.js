@@ -185,7 +185,27 @@ async function isAllowanceEnough(owner, spender, amount) {
   }
 }
 
+
+/*
+* Decimal to satoshi
+*/
+async function decimalToSatoshi(amount, decimals) {
+  const conversionBN = new BigNumber(10 ** decimals);
+  return new BigNumber(amount).multipliedBy(conversionBN).toString(10);
+}
+
+/*
+* Decimal to satoshi
+*/
+async function satoshiToDecimal(amount, decimals) {
+  const conversionBN = new BigNumber(10 ** decimals);
+  return new BigNumber(amount).dividedBy(conversionBN).toString(10);
+}
+
+
 module.exports = {
+  satoshiToDecimal,
+  decimalToSatoshi,
   ConvertTokenDecimalToNormal,
   isDevEnv,
   getBaseDataDir,

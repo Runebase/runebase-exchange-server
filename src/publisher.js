@@ -1,12 +1,11 @@
 const pubsub = require('./pubsub');
 
-module.exports.sendTradeInfo = function (tokenAddress, status, txid, date, from, to, soldTokens, boughtTokens, token, tokenName, orderType, type, price, orderId, time, amount, blockNum, decimals) {
+module.exports.sendTradeInfo = function (tokenAddress, status, txid, from, to, soldTokens, boughtTokens, token, tokenName, orderType, type, price, orderId, time, amount, blockNum, decimals) {
   pubsub.publish('onMyTradeInfo', {
     onMyTradeInfo: {
       tokenAddress,
       status,
       txid,
-      date,
       from,
       to,
       soldTokens,
@@ -25,7 +24,7 @@ module.exports.sendTradeInfo = function (tokenAddress, status, txid, date, from,
   });
 }
 
-module.exports.sendFundRedeemInfo = function (txid, type, token, tokenName, status, owner, time, date, amount, blockNum) {
+module.exports.sendFundRedeemInfo = function (txid, type, token, tokenName, status, owner, time, amount, blockNum) {
   pubsub.publish('onFundRedeemInfo', {
     onFundRedeemInfo: {
       txid,
@@ -35,20 +34,18 @@ module.exports.sendFundRedeemInfo = function (txid, type, token, tokenName, stat
       status,
       owner,
       time,
-      date,
       amount,
       blockNum,
     },
   });
 }
 
-module.exports.sendSellHistoryInfo = function (tokenAddress, status, txid, date, from, to, soldTokens, boughtTokens, token, tokenName, orderType, type, price, orderId, time, amount, blockNum, decimals) {
+module.exports.sendSellHistoryInfo = function (tokenAddress, status, txid, from, to, soldTokens, boughtTokens, token, tokenName, orderType, type, price, orderId, time, amount, blockNum, decimals) {
   pubsub.publish('onSellHistoryInfo', {
     onSellHistoryInfo: {
       tokenAddress,
       status,
       txid,
-      date,
       from,
       to,
       soldTokens,
@@ -67,13 +64,12 @@ module.exports.sendSellHistoryInfo = function (tokenAddress, status, txid, date,
   });
 }
 
-module.exports.sendBuyHistoryInfo = function (tokenAddress, status, txid, date, from, to, soldTokens, boughtTokens, token, tokenName, orderType, type, price, orderId, time, amount, blockNum, decimals) {
+module.exports.sendBuyHistoryInfo = function (tokenAddress, status, txid, from, to, soldTokens, boughtTokens, token, tokenName, orderType, type, price, orderId, time, amount, blockNum, decimals) {
   pubsub.publish('onBuyHistoryInfo', {
     onBuyHistoryInfo: {
       tokenAddress,
       status,
       txid,
-      date,
       from,
       to,
       soldTokens,

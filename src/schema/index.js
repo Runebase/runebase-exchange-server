@@ -61,7 +61,6 @@ type FundRedeem {
   status: _FundRedeemStatusType!
   owner: String!
   time: Int!
-  date: String!
   amount: Float!
   blockNum: Int
 }
@@ -83,7 +82,6 @@ type Trade {
   tokenAddress: String!
   type: String!
   txid: String!
-  date: String!
   from: String!
   to: String!
   soldTokens: String!

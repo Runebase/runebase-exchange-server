@@ -933,9 +933,9 @@ async function addTrade(rawLog, blockNum, txid){
     }
 
     // GraphQl push Subs
-    sendTradeInfo(trade.tokenAddress, trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum, trade.decimals);
-    sendSellHistoryInfo(trade.tokenAddress, trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum, trade.decimals);
-    sendBuyHistoryInfo(trade.tokenAddress, trade.status, trade.txid, trade.date, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum, trade.decimals);
+    sendTradeInfo(trade.tokenAddress, trade.status, trade.txid, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum, trade.decimals);
+    sendSellHistoryInfo(trade.tokenAddress, trade.status, trade.txid, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum, trade.decimals);
+    sendBuyHistoryInfo(trade.tokenAddress, trade.status, trade.txid, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum, trade.decimals);
 
     getLogger().debug('Trade Inserted');
     return trade;
@@ -1155,7 +1155,6 @@ async function syncFundRedeem(db, startBlock, endBlock, removeHexPrefix) {
               fund.status,
               fund.owner,
               fund.time,
-              fund.date,
               fund.amount,
               fund.blockNum
             );
@@ -1196,7 +1195,6 @@ async function syncFundRedeem(db, startBlock, endBlock, removeHexPrefix) {
               redeem.status,
               redeem.owner,
               redeem.time,
-              redeem.date,
               redeem.amount,
               redeem.blockNum
             );
