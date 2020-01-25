@@ -562,6 +562,7 @@ async function getAddressBalances() {
           let ExchangeTokenCounter = 0;
           for await (const ExchangeToken of markets) {
             try {
+              console.log(ExchangeToken);
               let Balance = new BigNumber(0);
               const hex = await getInstance().getHexAddress(address);
               const resp = await exchange.balanceOf({
@@ -573,7 +574,7 @@ async function getAddressBalances() {
               });
               Balance = Utils.hexToDecimalString(resp.executionResult.formattedOutput[0]);
               const found = _.find(addressObjs, { address });
-              found['Exchange'][ExchangeToken['market']] = await new BigNumber(Balance).dividedBy(SATOSHI_CONVERSION).toString(10);
+              found['Exchange'][ExchangeToken['market']] = await new BigNumber(Balance).dividedBy(10 ** ExchangeToken['decimals']).toString(10);
               ExchangeTokenCounter++;
               if (ExchangeTokenCounter == Object.keys(markets).length) {
                 getLogger().debug('Exchange Token Parent Done');
@@ -604,7 +605,7 @@ async function getAddressBalances() {
               });
               Balance = resp.balance;
               const found = _.find(addressObjs, { address });
-              found['Wallet'][WalletToken['market']] = new BigNumber(Balance).dividedBy(SATOSHI_CONVERSION).toString(10);
+              found['Wallet'][WalletToken['market']] = new BigNumber(Balance).dividedBy(10 ** WalletToken['decimals']).toString(10);
               WalletTokenCounter++;
               if (WalletTokenCounter == Object.keys(markets).length) {
                 getLogger().debug('Wallet Token Parent Done');
