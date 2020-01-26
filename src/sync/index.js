@@ -66,7 +66,7 @@ looptimes['12h'] = 43200;
 looptimes.d = 86400;
 looptimes.w = 604800;
 
-const insertEmptyCandles = async (timeNow, t, address) => new Promise(async (resolve) => {
+const insertEmptyCandles = async (timeNow, t, address) => new Promise((resolve) => {
   const f = async () => {
     const ohlc = await db.Charts.cfind({ tokenAddress: address, timeTable: t }).sort({ time: -1 }).limit(1).exec();
     // console.log('timeNow: ' + (timeNow - looptimes[t]));
@@ -84,18 +84,27 @@ const insertEmptyCandles = async (timeNow, t, address) => new Promise(async (res
         volume: 0,
       };
       await db.Charts.insert(ohlc_change);
-      sendChartInfo(ohlc_change.tokenAddress, ohlc_change.timeTable, ohlc_change.time, ohlc_change.open, ohlc_change.high, ohlc_change.low, ohlc_change.close, ohlc_change.volume);
-      await f();
+      sendChartInfo(
+        ohlc_change.tokenAddress,
+        ohlc_change.timeTable,
+        ohlc_change.time,
+        ohlc_change.open,
+        ohlc_change.high,
+        ohlc_change.low,
+        ohlc_change.close,
+        ohlc_change.volume
+      );
+      f();
     } else {
       resolve();
     }
   };
-  await f();
+  f();
 });
 
 const updateEmptyCandles = async (db) => {
   const markets = await db.Markets.find({});
-  const timeNow = parseInt(moment().unix());
+  const timeNow = parseInt(moment().unix(), 10);
 
   for (market of markets) {
     for (t of tables) {
@@ -195,7 +204,7 @@ async function sync(db) {
       await syncNewOrder(db, startBlock, endBlock, removeHexPrefix);
       getLogger().debug('Synced NewOrder');
 
-      await syncMarketMaker(db, startBlock, endBlock, removeHexPrefix);
+      await syncMarketMaker(startBlock, endBlock, removeHexPrefix);
       getLogger().debug('Synced syncMarketMaker');
 
       await syncOrderCancelled(db, startBlock, endBlock, removeHexPrefix);
@@ -1215,7 +1224,7 @@ async function syncFundRedeem(db, startBlock, endBlock, removeHexPrefix) {
   await Promise.all(createRedeemPromises);
 }
 
-async function syncMarketMaker(db, startBlock, endBlock, removeHexPrefix) {
+async function syncMarketMaker(startBlock, endBlock, removeHexPrefix) {
   let result;
   try {
     result = await getInstance().searchLogs(
@@ -1241,7 +1250,7 @@ async function syncMarketMaker(db, startBlock, endBlock, removeHexPrefix) {
           try {
             const marketMaker = new MarketMaker(blockNum, txid, rawLog).translate();
             console.log(marketMaker);
-            // await DBHelper.removeOrdersByQuery(db.NewOrder, { orderId: cancelOrder.orderId });
+            // await DBHelper.removeOrdersByQuery(eb.NewOrder, { orderId: cancelOrder.orderId });
             resolve();
           } catch (err) {
             getLogger().error(`ERROR: ${err.message}`);

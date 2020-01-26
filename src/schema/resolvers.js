@@ -6,7 +6,7 @@ const { withFilter } = require('graphql-subscriptions');
 
 const pubsub = require('../pubsub');
 const {
-  sendTradeInfo, sendFundRedeemInfo, sendSellHistoryInfo, sendBuyHistoryInfo, sendActiveOrderInfo, sendChartInfo,
+  sendTradeInfo, sendFundRedeemInfo, sendSellHistoryInfo, sendBuyHistoryInfo, sendActiveOrderInfo,
 } = require('../publisher');
 const { getLogger } = require('../utils/logger');
 const blockchain = require('../api/blockchain');
@@ -16,9 +16,9 @@ const Token = require('../api/token');
 const { Config, getContractMetadata } = require('../config');
 const { db, DBHelper } = require('../db');
 const {
-  txState, phase, orderState, SATOSHI_CONVERSION,
+  txState, orderState, SATOSHI_CONVERSION,
 } = require('../constants');
-const { calculateSyncPercent, getAddressBalances, getExchangeBalances } = require('../sync');
+const { calculateSyncPercent, getAddressBalances } = require('../sync');
 const { decimalToSatoshi, satoshiToDecimal } = require('../utils');
 const exchange = require('../api/exchange');
 const { getInstance } = require('../rclient');
@@ -52,10 +52,10 @@ function buildTransactionFilters({
   senderQAddress,
 }) {
   const filter = (
-    type ||
-    status ||
-    senderAddress ||
-    senderQAddress
+    type
+    || status
+    || senderAddress
+    || senderQAddress
   ) ? {} : null;
 
   if (type) {
@@ -93,14 +93,14 @@ function buildChartFilters({
   volume,
 }) {
   const filter = (
-    tokenAddress ||
-    timeTable ||
-    time ||
-    open ||
-    high ||
-    low ||
-    close ||
-    volume
+    tokenAddress
+    || timeTable
+    || time
+    || open
+    || high
+    || low
+    || close
+    || volume
   ) ? {} : null;
 
   if (tokenAddress) {
@@ -163,24 +163,24 @@ function buildNewOrderFilters({
   blockNum,
 }) {
   const filter = (
-    txid ||
-    tokenAddress ||
-    tokenName ||
-    startAmount ||
-    orderType ||
-    status ||
-    token ||
-    type ||
-    price ||
-    orderId ||
-    owner ||
-    sellToken ||
-    buyToken ||
-    priceMul ||
-    priceDiv ||
-    time ||
-    amount ||
-    blockNum
+    txid
+    || tokenAddress
+    || tokenName
+    || startAmount
+    || orderType
+    || status
+    || token
+    || type
+    || price
+    || orderId
+    || owner
+    || sellToken
+    || buyToken
+    || priceMul
+    || priceDiv
+    || time
+    || amount
+    || blockNum
   ) ? {} : null;
 
   if (txid) {
@@ -271,13 +271,13 @@ function buildMarketFilters({
   abi,
 }) {
   const filter = (
-    market ||
-    tokenName ||
-    price ||
-    change ||
-    volume ||
-    address ||
-    abi
+    market
+    || tokenName
+    || price
+    || change
+    || volume
+    || address
+    || abi
   ) ? {} : null;
 
   if (market) {
@@ -335,22 +335,22 @@ function buildTradeFilters({
   blockNum,
 }) {
   const filter = (
-    txid ||
-    tokenAddress ||
-    type ||
-    status ||
-    from ||
-    to ||
-    soldTokens ||
-    boughtTokens ||
-    tokenName ||
-    token ||
-    orderType ||
-    price ||
-    orderId ||
-    time ||
-    amount ||
-    blockNum
+    txid
+    || tokenAddress
+    || type
+    || status
+    || from
+    || to
+    || soldTokens
+    || boughtTokens
+    || tokenName
+    || token
+    || orderType
+    || price
+    || orderId
+    || time
+    || amount
+    || blockNum
   ) ? {} : null;
 
   if (txid) {
@@ -436,15 +436,15 @@ function buildFundRedeemFilters({
   blockNum,
 }) {
   const filter = (
-    txid ||
-    type ||
-    token ||
-    tokenName ||
-    status ||
-    owner ||
-    time ||
-    amount ||
-    blockNum
+    txid
+    || type
+    || token
+    || tokenName
+    || status
+    || owner
+    || time
+    || amount
+    || blockNum
   ) ? {} : null;
 
   if (txid) {
@@ -497,9 +497,9 @@ function buildMarketImageFilters({
   image,
 }) {
   const filter = (
-    market ||
-    tokenName ||
-    image
+    market
+    || tokenName
+    || image
   ) ? {} : null;
 
   if (market) {
@@ -528,9 +528,9 @@ function buildBaseCurrencyFilters({
   address,
 }) {
   const filter = (
-    pair ||
-    name ||
-    address
+    pair
+    || name
+    || address
   ) ? {} : null;
 
   if (pair) {
@@ -664,7 +664,7 @@ module.exports = {
   },
 
   Mutation: {
-    transfer: async (root, data, { db: { Transactions } }) => {
+    transfer: async (root, data) => {
       const {
         senderAddress,
         receiverAddress,
@@ -678,7 +678,7 @@ module.exports = {
       let txid;
       let sentTx;
 
-      if (token == MetaData.BaseCurrency.Pair) {
+      if (token === MetaData.BaseCurrency.Pair) {
         try {
           txid = await wallet.sendToAddress({
             address: receiverAddress,
@@ -691,8 +691,8 @@ module.exports = {
           throw err;
         }
       }
-      for (key in markets) {
-        if (token == markets[key].market) {
+      for (const key in markets) {
+        if (token === markets[key].market) {
           try {
             sentTx = await Token.transfer({
               to: receiverAddress,
@@ -726,12 +726,12 @@ module.exports = {
         token,
         amount,
       };
-      await DBHelper.insertTransaction(Transactions, tx);
+      await DBHelper.insertTransaction(db.Transactions, tx);
 
       return tx;
     },
 
-    transferExchange: async (root, data, { db: { FundRedeem } }) => {
+    transferExchange: async (root, data) => {
       const {
         senderAddress,
         receiverAddress,
@@ -746,7 +746,7 @@ module.exports = {
       let sentTx;
       let pendingAmount;
 
-      if (token == MetaData.BaseCurrency.Pair) {
+      if (token === MetaData.BaseCurrency.Pair) {
         try {
           txid = await exchange.depositExchangeBaseCurrency({
             exchangeAddress: MetaData.Exchange.Address,
@@ -759,8 +759,8 @@ module.exports = {
           throw err;
         }
       }
-      for (key in markets) {
-        if (token == markets[key].market) {
+      for (const key in markets) {
+        if (token === markets[key].market) {
           try {
             sentTx = await Token.transfer({
               to: exchangeAddress,
@@ -820,7 +820,7 @@ module.exports = {
       return deposit;
     },
 
-    redeemExchange: async (root, data, { db: { FundRedeem } }) => {
+    redeemExchange: async (root, data) => {
       const {
         senderAddress,
         receiverAddress,
@@ -829,13 +829,13 @@ module.exports = {
       } = data;
       const markets = await db.Markets.find({});
       const MetaData = await getContractMetadata();
-      const exchangeAddress = await getInstance().fromHexAddress(MetaData.Exchange.Address);
+      // const exchangeAddress = await getInstance().fromHexAddress(MetaData.Exchange.Address);
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
       let sentTx;
       let tokenaddress;
 
-      if (token == MetaData.BaseCurrency.Pair) {
+      if (token === MetaData.BaseCurrency.Pair) {
         try {
           txid = await exchange.redeemExchange({
             exchangeAddress: MetaData.Exchange.Address,
@@ -850,8 +850,8 @@ module.exports = {
           throw err;
         }
       }
-      for (redeemExchangeToken in markets) {
-        if (token == markets[redeemExchangeToken].market) {
+      for (const redeemExchangeToken in markets) {
+        if (token === markets[redeemExchangeToken].market) {
           try {
             txid = await exchange.redeemExchange({
               exchangeAddress: MetaData.Exchange.Address,
@@ -904,7 +904,7 @@ module.exports = {
       return withdrawal;
     },
 
-    orderExchange: async (root, data, { db: { Transactions } }) => {
+    orderExchange: async (root, data) => {
       const {
         senderAddress,
         receiverAddress,
@@ -915,7 +915,7 @@ module.exports = {
       } = data;
       const markets = await db.Markets.find({});
       const MetaData = await getContractMetadata();
-      const exchangeAddress = await getInstance().fromHexAddress(MetaData.Exchange.Address);
+      // const exchangeAddress = await getInstance().fromHexAddress(MetaData.Exchange.Address);
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
       let sentTx;
@@ -925,8 +925,8 @@ module.exports = {
       const priceFractN = priceFract.n;
       const priceFractD = priceFract.d;
 
-      for (TokenName in markets) {
-        if (token == markets[TokenName].market) {
+      for (const TokenName in markets) {
+        if (token === markets[TokenName].market) {
           try {
             tokenAddress = markets[TokenName].address;
             decimals = markets[TokenName].decimals;
@@ -954,12 +954,14 @@ module.exports = {
         throw err;
       }
       let typeOrder;
-      if (orderType == 'buy') {
+      let sellToken;
+      let buyToken;
+      if (orderType === 'buy') {
         typeOrder = 'BUYORDER';
         sellToken = MetaData.BaseCurrency.Address;
         buyToken = tokenAddress;
       }
-      if (orderType == 'sell') {
+      if (orderType === 'sell') {
         typeOrder = 'SELLORDER';
         sellToken = tokenAddress;
         buyToken = MetaData.BaseCurrency.Address;
@@ -967,7 +969,7 @@ module.exports = {
       // Insert Transaction
       const gasLimit = sentTx ? sentTx.args.gasLimit : Config.DEFAULT_GAS_LIMIT;
       const gasPrice = sentTx ? sentTx.args.gasPrice : Config.DEFAULT_GAS_PRICE;
-      const tx = {
+      const order = {
         txid,
         tokenAddress,
         type: typeOrder,
@@ -993,12 +995,31 @@ module.exports = {
         priceDiv: priceFractD,
         decimals,
       };
-      await DBHelper.insertTopic(db.NewOrder, tx);
-      sendActiveOrderInfo(tx.txid, tx.orderId, tx.owner, tx.token, tx.tokenName, tx.price, tx.type, tx.orderType, tx.sellToken, tx.buyToken, tx.priceMul, tx.priceDiv, tx.time, tx.amount, tx.startAmount, tx.blockNum, tx.status, tx.decimals);
-      return tx;
+      await DBHelper.insertTopic(db.NewOrder, order);
+      sendActiveOrderInfo(
+        order.txid,
+        order.orderId,
+        order.owner,
+        order.token,
+        order.tokenName,
+        order.price,
+        order.type,
+        order.orderType,
+        order.sellToken,
+        order.buyToken,
+        order.priceMul,
+        order.priceDiv,
+        order.time,
+        order.amount,
+        order.startAmount,
+        order.blockNum,
+        order.status,
+        order.decimals,
+      );
+      return order;
     },
 
-    cancelOrderExchange: async (root, data, { db: { Transactions } }) => {
+    cancelOrderExchange: async (root, data) => {
       const {
         senderAddress,
         orderId,
@@ -1025,7 +1046,7 @@ module.exports = {
       const gasLimit = sentTx ? sentTx.args.gasLimit : Config.DEFAULT_GAS_LIMIT;
       const gasPrice = sentTx ? sentTx.args.gasPrice : Config.DEFAULT_GAS_PRICE;
 
-      const NewOrder = {
+      const order = {
         txid,
         orderId,
         type: 'CANCELORDER',
@@ -1037,13 +1058,32 @@ module.exports = {
         senderAddress,
         receiverAddress: exchangeAddress,
       };
-      await DBHelper.cancelOrderByQuery(db.NewOrder, { orderId }, NewOrder);
+      await DBHelper.cancelOrderByQuery(db.NewOrder, { orderId }, order);
       const getOrder = await DBHelper.findOne(db.NewOrder, { orderId });
-      sendActiveOrderInfo(getOrder.txid, getOrder.orderId, getOrder.owner, getOrder.token, getOrder.tokenName, getOrder.price, getOrder.type, getOrder.orderType, getOrder.sellToken, getOrder.buyToken, getOrder.priceMul, getOrder.priceDiv, getOrder.time, getOrder.amount, getOrder.startAmount, getOrder.blockNum, getOrder.status, getOrder.decimals);
-      return NewOrder;
+      sendActiveOrderInfo(
+        getOrder.txid,
+        getOrder.orderId,
+        getOrder.owner,
+        getOrder.token,
+        getOrder.tokenName,
+        getOrder.price,
+        getOrder.type,
+        getOrder.orderType,
+        getOrder.sellToken,
+        getOrder.buyToken,
+        getOrder.priceMul,
+        getOrder.priceDiv,
+        getOrder.time,
+        getOrder.amount,
+        getOrder.startAmount,
+        getOrder.blockNum,
+        getOrder.status,
+        getOrder.decimals,
+      );
+      return order;
     },
 
-    executeOrderExchange: async (root, data, { db: { Transactions } }) => {
+    executeOrderExchange: async (root, data) => {
       const {
         senderAddress,
         orderId,
@@ -1106,9 +1146,63 @@ module.exports = {
         blockNum: 0,
         decimals: getOrder.decimals,
       };
-      sendTradeInfo(trade.tokenAddress, trade.status, trade.txid, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum, trade.decimals);
-      sendSellHistoryInfo(trade.tokenAddress, trade.status, trade.txid, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum, trade.decimals);
-      sendBuyHistoryInfo(trade.tokenAddress, trade.status, trade.txid, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum, trade.decimals);
+      sendTradeInfo(
+        trade.tokenAddress,
+        trade.status,
+        trade.txid,
+        trade.from,
+        trade.to,
+        trade.soldTokens,
+        trade.boughtTokens,
+        trade.token,
+        trade.tokenName,
+        trade.orderType,
+        trade.type,
+        trade.price,
+        trade.orderId,
+        trade.time,
+        trade.amount,
+        trade.blockNum,
+        trade.decimals,
+      );
+      sendSellHistoryInfo(
+        trade.tokenAddress,
+        trade.status,
+        trade.txid,
+        trade.from,
+        trade.to,
+        trade.soldTokens,
+        trade.boughtTokens,
+        trade.token,
+        trade.tokenName,
+        trade.orderType,
+        trade.type,
+        trade.price,
+        trade.orderId,
+        trade.time,
+        trade.amount,
+        trade.blockNum,
+        trade.decimals,
+      );
+      sendBuyHistoryInfo(
+        trade.tokenAddress,
+        trade.status,
+        trade.txid,
+        trade.from,
+        trade.to,
+        trade.soldTokens,
+        trade.boughtTokens,
+        trade.token,
+        trade.tokenName,
+        trade.orderType,
+        trade.type,
+        trade.price,
+        trade.orderId,
+        trade.time,
+        trade.amount,
+        trade.blockNum,
+        trade.decimals,
+      );
       await DBHelper.insertTopic(db.Trade, trade);
       return trade;
     },
@@ -1137,14 +1231,20 @@ module.exports = {
     },
     onSellHistoryInfo: {
       subscribe: withFilter(() => pubsub.asyncIterator('onSellHistoryInfo'), (payload, variables) => {
-        if (payload.onSellHistoryInfo.token === variables.token && payload.onSellHistoryInfo.orderType === variables.orderType) {
+        if (
+          payload.onSellHistoryInfo.token === variables.token
+          && payload.onSellHistoryInfo.orderType === variables.orderType
+        ) {
           return true;
         }
       }),
     },
     onBuyHistoryInfo: {
       subscribe: withFilter(() => pubsub.asyncIterator('onBuyHistoryInfo'), (payload, variables) => {
-        if (payload.onBuyHistoryInfo.token === variables.token && payload.onBuyHistoryInfo.orderType === variables.orderType) {
+        if (
+          payload.onBuyHistoryInfo.token === variables.token
+          && payload.onBuyHistoryInfo.orderType === variables.orderType
+        ) {
           return true;
         }
       }),
@@ -1167,7 +1267,10 @@ module.exports = {
     },
     onChartInfo: {
       subscribe: withFilter(() => pubsub.asyncIterator('onChartInfo'), (payload, variables) => {
-        if (payload.onChartInfo.timeTable === variables.timeTable && payload.onChartInfo.tokenAddress === variables.tokenAddress) {
+        if (
+          payload.onChartInfo.timeTable === variables.timeTable
+          && payload.onChartInfo.tokenAddress === variables.tokenAddress
+        ) {
           return true;
         }
       }),
@@ -1188,14 +1291,22 @@ module.exports = {
     },
     onBuyOrderInfo: {
       subscribe: withFilter(() => pubsub.asyncIterator('onBuyOrderInfo'), (payload, variables) => {
-        if (payload.onBuyOrderInfo.token === variables.token && payload.onBuyOrderInfo.orderType === variables.orderType && payload.onBuyOrderInfo.status === variables.status) {
+        if (
+          payload.onBuyOrderInfo.token === variables.token
+          && payload.onBuyOrderInfo.orderType === variables.orderType
+          && payload.onBuyOrderInfo.status === variables.status
+        ) {
           return true;
         }
       }),
     },
     onSellOrderInfo: {
       subscribe: withFilter(() => pubsub.asyncIterator('onSellOrderInfo'), (payload, variables) => {
-        if (payload.onSellOrderInfo.token === variables.token && payload.onSellOrderInfo.orderType === variables.orderType && payload.onSellOrderInfo.status === variables.status) {
+        if (
+          payload.onSellOrderInfo.token === variables.token
+          && payload.onSellOrderInfo.orderType === variables.orderType
+          && payload.onSellOrderInfo.status === variables.status
+        ) {
           return true;
         }
       }),
