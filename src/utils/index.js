@@ -3,7 +3,7 @@ const _ = require('lodash');
 const Web3Utils = require('web3-utils');
 const BigNumber = require('bignumber.js');
 
-const { Config, isMainnet } = require('../config');
+const { isMainnet } = require('../config');
 const { version } = require('../../package.json');
 const { getLogger } = require('./logger');
 
@@ -13,9 +13,9 @@ const { getLogger } = require('./logger');
 async function ConvertTokenDecimalToNormal(db, amount, token) {
   const markets = await db.Markets.find({});
 
-  for await (const market of markets) {
-    if (market.market == token) {
-      const conversionBN = new BigNumber(Number('1e' + market.decimals));
+  for (const market of markets) {
+    if (market.market === token) {
+      const conversionBN = new BigNumber(Number(`1e${market.decimals}`));
       return new BigNumber(amount).dividedBy(conversionBN).toString(10);
     }
   }
@@ -165,12 +165,12 @@ function hexArrayToDecimalArray(array) {
   if (!array) {
     return undefined;
   }
-  return _.map(array, item => hexToDecimalString(item));
+  return _.map(array, (item) => hexToDecimalString(item));
 }
 
 async function isAllowanceEnough(owner, spender, amount) {
   try {
-    const res = await require('../api/runebaseprediction_token').allowance({
+    const res = await require('../api/token').allowance({
       owner,
       spender,
       senderAddress: owner,

@@ -356,8 +356,8 @@ async function updateDB(tx, db) {
 
 
 module.exports = {
-  updatePendingTxs: updatePendingTxs,
-  updatePendingOrders: updatePendingOrders,
-  updatePendingFundRedeems: updatePendingFundRedeems,
-  updatePendingTrades: updatePendingTrades,
+  updatePendingTxs,
+  updatePendingOrders,
+  updatePendingFundRedeems,
+  updatePendingTrades,
 };

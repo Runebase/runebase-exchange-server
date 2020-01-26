@@ -1,7 +1,7 @@
 /* eslint no-underscore-dangle: 0 */
 
 const _ = require('lodash');
-const { Decoder, Utils } = require('rweb3');
+const { Decoder } = require('rweb3');
 const { isMainnet } = require('../config');
 
 class MarketMaker {
@@ -15,8 +15,8 @@ class MarketMaker {
   }
 
   decode() {
-    this.time = this.rawLog._time.toString(10);   
-    this.amount = this.rawLog._amount.toString(10); 
+    this.time = this.rawLog._time.toString(10);
+    this.amount = this.rawLog._amount.toString(10);
     this.token = this.rawLog._token;
     this.owner = this.rawLog._owner;
   }

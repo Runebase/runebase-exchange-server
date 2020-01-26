@@ -66,20 +66,19 @@ async function initDB() {
     const MetaData = await getContractMetadata();
 
     const ImportBaseCurrency = () => new Promise((resolve, reject) => {
-      db.BaseCurrency.count({}, function (err, count) {
+      db.BaseCurrency.count({}, (err, count) => {
         if (count === 0) {
-          const baseCurrency = new BaseCurrency(MetaData['BaseCurrency']).translate();
-          db.BaseCurrency.insert(baseCurrency).then((value)=>{
-              resolve();
+          const baseCurrency = new BaseCurrency(MetaData.BaseCurrency).translate();
+          db.BaseCurrency.insert(baseCurrency).then((value) => {
+            resolve();
           });
         } else {
           resolve();
         }
-      })
-    })
+      });
+    });
 
     await ImportBaseCurrency();
-
   } catch (err) {
     throw Error(`DB load Error: ${err.message}`);
   }
@@ -154,17 +153,17 @@ async function migrateDB() {
 }
 
 class DBHelper {
-  static async getCount(db, query) {
+  static async getCount(database, query) {
     try {
-      return await db.count(query);
+      return await database.count(query);
     } catch (err) {
-      getLogger().error(`Error getting DB count. db:${db} err:${err.message}`);
+      getLogger().error(`Error getting DB count. database:${database} err:${err.message}`);
     }
   }
 
-  static async insertTopic(db, topic) {
+  static async insertTopic(database, topic) {
     try {
-      await db.insert(topic);
+      await database.insert(topic);
     } catch (err) {
       getLogger().error(`Error insert Topic ${topic}: ${err.message}`);
     }
@@ -242,9 +241,9 @@ class DBHelper {
   * Update FundRedeem
   *
   */
-  static async updateFundRedeemByQuery(db, query, topic) {
+  static async updateFundRedeemByQuery(database, query, topic) {
     try {
-      await db.update(
+      await database.update(
         query,
         {
           $set: {
@@ -271,9 +270,9 @@ class DBHelper {
   * Update Trade
   *
   */
-  static async updateTradeByQuery(db, query, topic) {
+  static async updateTradeByQuery(database, query, topic) {
     try {
-      await db.update(
+      await database.update(
         query,
         {
           $set: {
@@ -305,9 +304,9 @@ class DBHelper {
   * Update Markets
   *
   */
-  static async updateMarketsByQuery(db, query, topic) {
+  static async updateMarketsByQuery(database, query, topic) {
     try {
-      await db.update(
+      await database.update(
         query,
         {
           $set: {
@@ -329,9 +328,9 @@ class DBHelper {
   * Canceled orders
   *
   */
-  static async updateCanceledOrdersByQuery(db, query, topic) {
+  static async updateCanceledOrdersByQuery(database, query, topic) {
     try {
-      await db.update(
+      await database.update(
         query,
         {
           $set: {
@@ -352,9 +351,9 @@ class DBHelper {
   * FulFill orders
   *
   */
-  static async updateFulfilledOrdersByQuery(db, query, topic) {
+  static async updateFulfilledOrdersByQuery(database, query, topic) {
     try {
-      await db.update(
+      await database.update(
         query,
         {
           $set: {
@@ -375,9 +374,9 @@ class DBHelper {
   * Update Order
   *
   */
-  static async updateOrderByQuery(db, query, topic) {
+  static async updateOrderByQuery(database, query, topic) {
     try {
-      await db.update(
+      await database.update(
         query,
         {
           $set: {
@@ -412,9 +411,9 @@ class DBHelper {
   * Update TradeOrder
   *
   */
-  static async updateTradeOrderByQuery(db, query, topic) {
+  static async updateTradeOrderByQuery(database, query, topic) {
     try {
-      await db.update(
+      await database.update(
         query,
         {
           $set: {
@@ -428,9 +427,9 @@ class DBHelper {
     }
   }
 
-  static async cancelOrderByQuery(db, query, topic) {
+  static async cancelOrderByQuery(database, query, topic) {
     try {
-      await db.update(
+      await database.update(
         query,
         {
           $set: {
@@ -447,29 +446,29 @@ class DBHelper {
     }
   }
 
- /*
+  /*
   * Returns the fields of the object in one of the tables searched by the query.
   * @param db The DB table.
   * @param query {Object} The query by items.
   * @param fields {Array} The fields to return for the found item in an array.
   */
-  static async findTradeAndUpdate(db, query, fields, soldTokens, orderId) {
+  static async findTradeAndUpdate(database, query, fields, soldTokens, orderId) {
     let fieldsObj;
     if (!_.isEmpty(fields)) {
       fieldsObj = {};
-      _.each(fields, field => fieldsObj[field] = 1);
+      _.each(fields, (field) => fieldsObj[field] = 1);
     }
 
-    const found = await db.findOne(query, fieldsObj);
+    const found = await database.findOne(query, fieldsObj);
     if (!found) {
-      const { filename } = db.nedb;
+      const { filename } = database.nedb;
       throw Error(`Could not findOne ${filename.substr(filename.lastIndexOf('/') + 1)} by query ${JSON.stringify(query)}`);
     }
     const newAmount = Number(found.amount) - Number(soldTokens);
     const updateOrder = {
       amount: newAmount,
-    }
-    await DBHelper.updateTradeOrderByQuery(db, { orderId }, updateOrder);
+    };
+    await DBHelper.updateTradeOrderByQuery(database, { orderId }, updateOrder);
     return found;
   }
 
@@ -480,54 +479,54 @@ class DBHelper {
   * @param query {Object} The query by items.
   * @param fields {Array} The fields to return for the found item in an array.
   */
-  static async findOne(db, query, fields) {
+  static async findOne(database, query, fields) {
     let fieldsObj;
     if (!_.isEmpty(fields)) {
       fieldsObj = {};
-      _.each(fields, field => fieldsObj[field] = 1);
+      _.each(fields, (field) => fieldsObj[field] = 1);
     }
 
-    const found = await db.findOne(query, fieldsObj);
+    const found = await database.findOne(query, fieldsObj);
     if (!found) {
-      const { filename } = db.nedb;
+      const { filename } = database.nedb;
       throw Error(`Could not findOne ${filename.substr(filename.lastIndexOf('/') + 1)} by query ${JSON.stringify(query)}`);
     }
     return found;
   }
 
-    /*
+  /*
   * Returns the fields of the object in one of the tables searched by the query.
   * @param db The DB table.
   * @param query {Object} The query by items.
   * @param fields {Array} The fields to return for the found item in an array.
   */
-  static async find(db, query, fields) {
+  static async find(database, query, fields) {
     let fieldsObj;
     if (!_.isEmpty(fields)) {
       fieldsObj = {};
-      _.each(fields, field => fieldsObj[field] = 1);
+      _.each(fields, (field) => fieldsObj[field] = 1);
     }
 
-    const found = await db.find(query, fieldsObj);
+    const found = await database.find(query, fieldsObj);
     if (!found) {
-      const { filename } = db.nedb;
+      const { filename } = database.nedb;
       throw Error(`Could not find ${filename.substr(filename.lastIndexOf('/') + 1)} by query ${JSON.stringify(query)}`);
     }
     return found;
   }
 
-  static async updateObjectByQuery(db, query, update) {
+  static async updateObjectByQuery(database, query, update) {
     try {
-      await db.update(query, { $set: update }, {});
+      await database.update(query, { $set: update }, {});
     } catch (err) {
       getLogger().error(`Error update ${update} object by query:${query}: ${err.message}`);
     }
   }
 
-  static async insertTransaction(db, tx) {
+  static async insertTransaction(database, tx) {
     try {
       getLogger().debug(`Mutation Insert: Transaction ${tx.type} txid:${tx.txid}`);
-      await db.insert(tx);
+      await database.insert(tx);
     } catch (err) {
       getLogger().error(`Error inserting Transaction ${tx.type} ${tx.txid}: ${err.message}`);
       throw err;

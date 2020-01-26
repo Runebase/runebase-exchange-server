@@ -5,7 +5,9 @@ const BigNumber = require('bignumber.js');
 const { withFilter } = require('graphql-subscriptions');
 
 const pubsub = require('../pubsub');
-const { sendTradeInfo, sendFundRedeemInfo, sendSellHistoryInfo, sendBuyHistoryInfo, sendActiveOrderInfo, sendChartInfo } = require('../publisher');
+const {
+  sendTradeInfo, sendFundRedeemInfo, sendSellHistoryInfo, sendBuyHistoryInfo, sendActiveOrderInfo, sendChartInfo,
+} = require('../publisher');
 const { getLogger } = require('../utils/logger');
 const blockchain = require('../api/blockchain');
 const network = require('../api/network');
@@ -13,7 +15,9 @@ const wallet = require('../api/wallet');
 const Token = require('../api/token');
 const { Config, getContractMetadata } = require('../config');
 const { db, DBHelper } = require('../db');
-const { txState, phase, orderState, SATOSHI_CONVERSION } = require('../constants');
+const {
+  txState, phase, orderState, SATOSHI_CONVERSION,
+} = require('../constants');
 const { calculateSyncPercent, getAddressBalances, getExchangeBalances } = require('../sync');
 const { decimalToSatoshi, satoshiToDecimal } = require('../utils');
 const exchange = require('../api/exchange');
@@ -41,9 +45,18 @@ function buildCursorOptions(cursor, orderBy, limit, skip) {
 
 
 function buildTransactionFilters({
-  OR = [], type, status, senderAddress, senderQAddress,
+  OR = [],
+  type,
+  status,
+  senderAddress,
+  senderQAddress,
 }) {
-  const filter = (type || status || senderAddress || senderQAddress) ? {} : null;
+  const filter = (
+    type ||
+    status ||
+    senderAddress ||
+    senderQAddress
+  ) ? {} : null;
 
   if (type) {
     filter.type = type;
@@ -69,14 +82,30 @@ function buildTransactionFilters({
 }
 
 function buildChartFilters({
-  OR = [], tokenAddress, timeTable, time, open, high, low, close, volume,
+  OR = [],
+  tokenAddress,
+  timeTable,
+  time,
+  open,
+  high,
+  low,
+  close,
+  volume,
 }) {
-  const filter = (tokenAddress || timeTable || time || open || high || low || close || volume) ? {} : null;
+  const filter = (
+    tokenAddress ||
+    timeTable ||
+    time ||
+    open ||
+    high ||
+    low ||
+    close ||
+    volume
+  ) ? {} : null;
 
   if (tokenAddress) {
     filter.tokenAddress = tokenAddress;
   }
-
   if (timeTable) {
     filter.timeTable = timeTable;
   }
@@ -113,9 +142,47 @@ function buildChartFilters({
 }
 
 function buildNewOrderFilters({
-  OR = [], txid, tokenAddress, tokenName, startAmount, orderType, status, token, type, price, orderId, owner, sellToken, buyToken, priceMul, priceDiv, time, amount, blockNum
+  OR = [],
+  txid,
+  tokenAddress,
+  tokenName,
+  startAmount,
+  orderType,
+  status,
+  token,
+  type,
+  price,
+  orderId,
+  owner,
+  sellToken,
+  buyToken,
+  priceMul,
+  priceDiv,
+  time,
+  amount,
+  blockNum,
 }) {
-  const filter = (txid || tokenAddress || tokenName || startAmount || orderType || status || token || type || price || orderId || owner || sellToken || buyToken || priceMul || priceDiv || time || amount || blockNum) ? {} : null;
+  const filter = (
+    txid ||
+    tokenAddress ||
+    tokenName ||
+    startAmount ||
+    orderType ||
+    status ||
+    token ||
+    type ||
+    price ||
+    orderId ||
+    owner ||
+    sellToken ||
+    buyToken ||
+    priceMul ||
+    priceDiv ||
+    time ||
+    amount ||
+    blockNum
+  ) ? {} : null;
+
   if (txid) {
     filter.txid = txid;
   }
@@ -194,9 +261,24 @@ function buildNewOrderFilters({
   return filters;
 }
 function buildMarketFilters({
-  OR = [], market, tokenName, price, change, volume, address, abi
+  OR = [],
+  market,
+  tokenName,
+  price,
+  change,
+  volume,
+  address,
+  abi,
 }) {
-  const filter = (market || tokenName || price || change || volume || address || abi) ? {} : null;
+  const filter = (
+    market ||
+    tokenName ||
+    price ||
+    change ||
+    volume ||
+    address ||
+    abi
+  ) ? {} : null;
 
   if (market) {
     filter.market = market;
@@ -234,9 +316,42 @@ function buildMarketFilters({
 }
 
 function buildTradeFilters({
-  OR = [], txid, tokenAddress, type, status, from, to, soldTokens, boughtTokens, tokenName, token, orderType, price, orderId, time, amount, blockNum
+  OR = [],
+  txid,
+  tokenAddress,
+  type,
+  status,
+  from,
+  to,
+  soldTokens,
+  boughtTokens,
+  tokenName,
+  token,
+  orderType,
+  price,
+  orderId,
+  time,
+  amount,
+  blockNum,
 }) {
-  const filter = (txid || tokenAddress || type || status || from || to || soldTokens || boughtTokens || tokenName || token || orderType || price || orderId  || time || amount || blockNum) ? {} : null;
+  const filter = (
+    txid ||
+    tokenAddress ||
+    type ||
+    status ||
+    from ||
+    to ||
+    soldTokens ||
+    boughtTokens ||
+    tokenName ||
+    token ||
+    orderType ||
+    price ||
+    orderId ||
+    time ||
+    amount ||
+    blockNum
+  ) ? {} : null;
 
   if (txid) {
     filter.txid = txid;
@@ -309,9 +424,28 @@ function buildTradeFilters({
 }
 
 function buildFundRedeemFilters({
-  OR = [], txid, type, token, tokenName, status, owner, time, amount, blockNum
+  OR = [],
+  txid,
+  type,
+  token,
+  tokenName,
+  status,
+  owner,
+  time,
+  amount,
+  blockNum,
 }) {
-  const filter = (txid || type || token || tokenName || status || owner || time || amount || blockNum) ? {} : null;
+  const filter = (
+    txid ||
+    type ||
+    token ||
+    tokenName ||
+    status ||
+    owner ||
+    time ||
+    amount ||
+    blockNum
+  ) ? {} : null;
 
   if (txid) {
     filter.txid = txid;
@@ -357,9 +491,16 @@ function buildFundRedeemFilters({
 }
 
 function buildMarketImageFilters({
-  OR = [], market, tokenName, image
+  OR = [],
+  market,
+  tokenName,
+  image,
 }) {
-  const filter = (market || tokenName || image) ? {} : null;
+  const filter = (
+    market ||
+    tokenName ||
+    image
+  ) ? {} : null;
 
   if (market) {
     filter.market = market;
@@ -381,9 +522,16 @@ function buildMarketImageFilters({
 }
 
 function buildBaseCurrencyFilters({
-  OR = [], pair, name, address
+  OR = [],
+  pair,
+  name,
+  address,
 }) {
-  const filter = (pair || name || address) ? {} : null;
+  const filter = (
+    pair ||
+    name ||
+    address
+  ) ? {} : null;
 
   if (pair) {
     filter.pair = pair;
@@ -530,7 +678,7 @@ module.exports = {
       let txid;
       let sentTx;
 
-      if (token == MetaData['BaseCurrency']['Pair']) {
+      if (token == MetaData.BaseCurrency.Pair) {
         try {
           txid = await wallet.sendToAddress({
             address: receiverAddress,
@@ -543,17 +691,17 @@ module.exports = {
           throw err;
         }
       }
-      for(key in markets){
-        if (token == markets[key]['market']) {
+      for (key in markets) {
+        if (token == markets[key].market) {
           try {
             sentTx = await Token.transfer({
               to: receiverAddress,
               value: amount,
               senderAddress,
-              token: markets[key]['market'],
-              tokenAddress: markets[key]['address'],
-              abi: MetaData['TokenAbi'][markets[key]['abi']],
-              RrcVersion: markets[key]['abi'],
+              token: markets[key].market,
+              tokenAddress: markets[key].address,
+              abi: MetaData.TokenAbi[markets[key].abi],
+              RrcVersion: markets[key].abi,
             });
             txid = sentTx.txid;
           } catch (err) {
@@ -592,36 +740,36 @@ module.exports = {
       } = data;
       const markets = await db.Markets.find({});
       const MetaData = await getContractMetadata();
-      const exchangeAddress = await getInstance().fromHexAddress(MetaData['Exchange']['Address']);
+      const exchangeAddress = await getInstance().fromHexAddress(MetaData.Exchange.Address);
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
       let sentTx;
       let pendingAmount;
 
-      if (token == MetaData['BaseCurrency']['Pair']) {
+      if (token == MetaData.BaseCurrency.Pair) {
         try {
           txid = await exchange.depositExchangeBaseCurrency({
-            exchangeAddress: MetaData['Exchange']['Address'],
+            exchangeAddress: MetaData.Exchange.Address,
             amount,
             senderAddress,
-            abi: MetaData['Exchange']['Abi'],
+            abi: MetaData.Exchange.Abi,
           });
         } catch (err) {
           getLogger().error(`Error calling exchange.fund: ${err.message}`);
           throw err;
         }
       }
-      for(key in markets){
-        if (token == markets[key]['market']) {
+      for (key in markets) {
+        if (token == markets[key].market) {
           try {
             sentTx = await Token.transfer({
               to: exchangeAddress,
               value: amount,
               senderAddress,
-              token: markets[key]['market'],
-              tokenAddress: markets[key]['address'],
-              abi: MetaData['TokenAbi'][markets[key]['abi']],
-              RrcVersion: markets[key]['abi'],
+              token: markets[key].market,
+              tokenAddress: markets[key].address,
+              abi: MetaData.TokenAbi[markets[key].abi],
+              RrcVersion: markets[key].abi,
             });
             txid = sentTx.txid;
           } catch (err) {
@@ -631,13 +779,13 @@ module.exports = {
         }
       }
 
-      if (token === MetaData['BaseCurrency']['Pair']) {
+      if (token === MetaData.BaseCurrency.Pair) {
         pendingAmount = amount;
       } else {
         pendingAmount = parseFloat(new BigNumber(amount).dividedBy(SATOSHI_CONVERSION));
       }
-      getLogger().debug('Token Deposit' + token);
-      getLogger().debug('New Big Number Deposit: ' + new BigNumber(amount).dividedBy(SATOSHI_CONVERSION).toString());
+      getLogger().debug(`Token Deposit${token}`);
+      getLogger().debug(`New Big Number Deposit: ${new BigNumber(amount).dividedBy(SATOSHI_CONVERSION).toString()}`);
       // Insert Transaction
       const gasLimit = sentTx ? sentTx.args.gasLimit : Config.DEFAULT_GAS_LIMIT;
       const gasPrice = sentTx ? sentTx.args.gasPrice : Config.DEFAULT_GAS_PRICE;
@@ -666,7 +814,7 @@ module.exports = {
         deposit.owner,
         deposit.time,
         deposit.amount,
-        deposit.blockNum
+        deposit.blockNum,
       );
       await DBHelper.insertTopic(db.FundRedeem, deposit);
       return deposit;
@@ -680,38 +828,38 @@ module.exports = {
         amount,
       } = data;
       const markets = await db.Markets.find({});
-      let MetaData = await getContractMetadata();
-      const exchangeAddress = await getInstance().fromHexAddress(MetaData['Exchange']['Address']);
+      const MetaData = await getContractMetadata();
+      const exchangeAddress = await getInstance().fromHexAddress(MetaData.Exchange.Address);
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
       let sentTx;
       let tokenaddress;
 
-      if (token == MetaData['BaseCurrency']['Pair']) {
+      if (token == MetaData.BaseCurrency.Pair) {
         try {
           txid = await exchange.redeemExchange({
-            exchangeAddress: MetaData['Exchange']['Address'],
+            exchangeAddress: MetaData.Exchange.Address,
             amount,
             token,
-            tokenaddress: MetaData['BaseCurrency']['Address'],
+            tokenaddress: MetaData.BaseCurrency.Address,
             senderAddress,
-            abi: MetaData['Exchange']['Abi'],
+            abi: MetaData.Exchange.Abi,
           });
         } catch (err) {
           getLogger().error(`Error calling redeemExchange: ${err.message}`);
           throw err;
         }
       }
-      for(redeemExchangeToken in markets){
-        if (token == markets[redeemExchangeToken]['market']) {
+      for (redeemExchangeToken in markets) {
+        if (token == markets[redeemExchangeToken].market) {
           try {
             txid = await exchange.redeemExchange({
-              exchangeAddress: MetaData['Exchange']['Address'],
+              exchangeAddress: MetaData.Exchange.Address,
               amount,
               token,
-              tokenaddress: markets[redeemExchangeToken]['address'],
+              tokenaddress: markets[redeemExchangeToken].address,
               senderAddress,
-              abi: MetaData['Exchange']['Abi'],
+              abi: MetaData.Exchange.Abi,
             });
           } catch (err) {
             getLogger().error(`Error calling redeemExchange: ${err.message}`);
@@ -750,7 +898,7 @@ module.exports = {
         withdrawal.owner,
         withdrawal.time,
         withdrawal.amount,
-        withdrawal.blockNum
+        withdrawal.blockNum,
       );
       await DBHelper.insertTopic(db.FundRedeem, withdrawal);
       return withdrawal;
@@ -767,7 +915,7 @@ module.exports = {
       } = data;
       const markets = await db.Markets.find({});
       const MetaData = await getContractMetadata();
-      const exchangeAddress = await getInstance().fromHexAddress(MetaData['Exchange']['Address']);
+      const exchangeAddress = await getInstance().fromHexAddress(MetaData.Exchange.Address);
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
       let sentTx;
@@ -778,10 +926,10 @@ module.exports = {
       const priceFractD = priceFract.d;
 
       for (TokenName in markets) {
-        if (token == markets[TokenName]['market']) {
+        if (token == markets[TokenName].market) {
           try {
-            tokenAddress = markets[TokenName]['address'];
-            decimals = markets[TokenName]['decimals'];
+            tokenAddress = markets[TokenName].address;
+            decimals = markets[TokenName].decimals;
           } catch (err) {
             getLogger().error(`Error calling MetaData['Tokens'][${TokenName}]: ${err.message}`);
             throw err;
@@ -791,7 +939,7 @@ module.exports = {
 
       try {
         txid = await exchange.orderExchange({
-          exchangeAddress: MetaData['Exchange']['Address'],
+          exchangeAddress: MetaData.Exchange.Address,
           amount,
           token,
           tokenAddress,
@@ -799,7 +947,7 @@ module.exports = {
           priceFractN,
           priceFractD,
           orderType,
-          abi: MetaData['Exchange']['Abi'],
+          abi: MetaData.Exchange.Abi,
         });
       } catch (err) {
         getLogger().error(`Error calling orderExchange: ${err.message}`);
@@ -808,13 +956,13 @@ module.exports = {
       let typeOrder;
       if (orderType == 'buy') {
         typeOrder = 'BUYORDER';
-        sellToken = MetaData['BaseCurrency']['Address'];
+        sellToken = MetaData.BaseCurrency.Address;
         buyToken = tokenAddress;
       }
       if (orderType == 'sell') {
-        typeOrder = 'SELLORDER'
+        typeOrder = 'SELLORDER';
         sellToken = tokenAddress;
-        buyToken = MetaData['BaseCurrency']['Address'];
+        buyToken = MetaData.BaseCurrency.Address;
       }
       // Insert Transaction
       const gasLimit = sentTx ? sentTx.args.gasLimit : Config.DEFAULT_GAS_LIMIT;
@@ -857,18 +1005,17 @@ module.exports = {
       } = data;
       let sentTx;
       const MetaData = await getContractMetadata();
-      const exchangeAddress = await getInstance().fromHexAddress(MetaData['Exchange']['Address']);
+      const exchangeAddress = await getInstance().fromHexAddress(MetaData.Exchange.Address);
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
 
       try {
         txid = await exchange.cancelOrderExchange({
-          exchangeAddress: MetaData['Exchange']['Address'],
+          exchangeAddress: MetaData.Exchange.Address,
           senderAddress,
           orderId,
-          abi: MetaData['Exchange']['Abi'],
+          abi: MetaData.Exchange.Abi,
         });
-
       } catch (err) {
         getLogger().error(`Error calling orderExchange: ${err.message}`);
         throw err;
@@ -880,7 +1027,7 @@ module.exports = {
 
       const NewOrder = {
         txid,
-        orderId: orderId,
+        orderId,
         type: 'CANCELORDER',
         version,
         status: 'PENDINGCANCEL',
@@ -904,19 +1051,18 @@ module.exports = {
       } = data;
       let sentTx;
       const MetaData = await getContractMetadata();
-      const exchangeAddress = await getInstance().fromHexAddress(MetaData['Exchange']['Address']);
+      const exchangeAddress = await getInstance().fromHexAddress(MetaData.Exchange.Address);
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
 
       try {
         txid = await exchange.executeOrderExchange({
-          exchangeAddress: MetaData['Exchange']['Address'],
+          exchangeAddress: MetaData.Exchange.Address,
           senderAddress,
           orderId,
           exchangeAmount,
-          abi: MetaData['Exchange']['Abi'],
+          abi: MetaData.Exchange.Abi,
         });
-
       } catch (err) {
         getLogger().error(`Error calling executeExchange: ${err.message}`);
         throw err;
@@ -959,11 +1105,11 @@ module.exports = {
         amount: exchangeAmount,
         blockNum: 0,
         decimals: getOrder.decimals,
-      }
+      };
       sendTradeInfo(trade.tokenAddress, trade.status, trade.txid, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum, trade.decimals);
       sendSellHistoryInfo(trade.tokenAddress, trade.status, trade.txid, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum, trade.decimals);
       sendBuyHistoryInfo(trade.tokenAddress, trade.status, trade.txid, trade.from, trade.to, trade.soldTokens, trade.boughtTokens, trade.token, trade.tokenName, trade.orderType, trade.type, trade.price, trade.orderId, trade.time, trade.amount, trade.blockNum, trade.decimals);
-      await DBHelper.insertTopic(db.Trade, trade)
+      await DBHelper.insertTopic(db.Trade, trade);
       return trade;
     },
   },

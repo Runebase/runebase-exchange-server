@@ -1,7 +1,7 @@
 /* eslint no-underscore-dangle: 0 */
 
 const _ = require('lodash');
-const { Decoder, Utils } = require('rweb3');
+const { Decoder } = require('rweb3');
 const { isMainnet } = require('../config');
 
 class Trade {
@@ -29,10 +29,10 @@ class Trade {
     this.orderType = this.getOrder.orderType;
     this.tokenName = this.getOrder.tokenName;
     this.token = this.getOrder.token;
-    if (this.orderType === "SELLORDER") {
+    if (this.orderType === 'SELLORDER') {
       this.amount = this.soldTokens;
     }
-    if (this.orderType === "BUYORDER") {
+    if (this.orderType === 'BUYORDER') {
       this.amount = this.boughtTokens;
     }
     this.tokenAddress = this.getOrder.tokenAddress;

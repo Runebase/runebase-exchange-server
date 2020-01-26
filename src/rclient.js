@@ -1,6 +1,7 @@
 const { Rweb3 } = require('rweb3');
 
 const { getRunebaseRPCAddress } = require('./config');
+
 const RClient = (() => {
   let instance;
 

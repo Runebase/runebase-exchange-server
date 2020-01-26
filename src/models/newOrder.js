@@ -1,10 +1,10 @@
 /* eslint no-underscore-dangle: 0 */
 
 const _ = require('lodash');
-const { Decoder, Utils } = require('rweb3');
-const math = require('mathjs')
+const { Decoder } = require('rweb3');
+const math = require('mathjs');
 const stripHexPrefix = require('strip-hex-prefix');
-const { isMainnet, getContractMetadata } = require('../config');
+const { isMainnet } = require('../config');
 const { orderState } = require('../constants');
 
 class NewOrder {
@@ -31,24 +31,23 @@ class NewOrder {
     if (this.rawLog._buyToken.toString(10) === '0x0000000000000000000000000000000000000000') {
       this.tokenAddress = stripHexPrefix(this.rawLog._sellToken.toString(10));
     }
-    for (let key in this.tokens){
-      if (this.tokens[key]['address'] === this.sellToken || this.tokens[key]['address'] === this.buyToken) {
-        this.decimals = this.tokens[key]['decimals'];
-        this.token = this.tokens[key]['market'];
-        this.tokenName = this.tokens[key]['tokenName'];
+    for (const key in this.tokens) {
+      if (this.tokens[key].address === this.sellToken || this.tokens[key].address === this.buyToken) {
+        this.decimals = this.tokens[key].decimals;
+        this.token = this.tokens[key].market;
+        this.tokenName = this.tokens[key].tokenName;
       }
     }
     if (this.sellToken === this.baseCurrencyAddress) {
       this.type = 'BUYORDER';
       this.orderType = 'BUYORDER';
-    }
-    else{
+    } else {
       this.type = 'SELLORDER';
       this.orderType = 'SELLORDER';
     }
     this.priceMul = this.rawLog._priceMul.toString(10);
     this.priceDiv = this.rawLog._priceDiv.toString(10);
-    const fract = this.priceMul + '/' + this.priceDiv;
+    const fract = `${this.priceMul}/${this.priceDiv}`;
     const g = math.fraction(fract);
     const c = math.number(g);
     this.price = c;

@@ -1,3 +1,4 @@
+/* eslint-disable global-require, max-len */
 require('dotenv').config();
 require('winston-daily-rotate-file');
 const fs = require('fs-extra');

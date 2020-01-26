@@ -46,13 +46,13 @@ const Transaction = {
       throw new TypeError('token and amount need to be defined');
     }
     // Skip approve if enough allowance
-    let txType = type;
+    const txType = type;
 
     const costsArr = [];
 
-    //if (txType.startsWith('APPROVE')) {
+    // if (txType.startsWith('APPROVE')) {
     //  costsArr.push(getApproveObj(token, amount));
-    //}
+    // }
     const newAmount = await Utils.ConvertTokenDecimalToNormal(db, amount, token);
 
     switch (txType) {
@@ -127,7 +127,7 @@ const Transaction = {
         break;
       }
       default: {
-        throw new Error(`Invalid transactionType: ${transactionType}`);
+        throw new Error(`Invalid transactionType: ${txType}`);
       }
     }
     return costsArr;

@@ -3,12 +3,26 @@
 const fs = require('fs-extra');
 
 const _ = require('lodash');
-const pubsub = require('../pubsub');
-const { sendTradeInfo, sendFundRedeemInfo, sendSellHistoryInfo, sendBuyHistoryInfo, sendSellOrderInfo, sendBuyOrderInfo, sendActiveOrderInfo, sendCanceledOrderInfo, sendFulfilledOrderInfo, sendChartInfo } = require('../publisher');
-const { getLogger } = require('../utils/logger');
-//const { Utils } = require('rweb3');
 const moment = require('moment');
 const BigNumber = require('bignumber.js');
+const async = require('async');
+const Web3 = require('web3');
+const abi = require('ethjs-abi');
+const pubsub = require('../pubsub');
+const {
+  sendTradeInfo,
+  sendFundRedeemInfo,
+  sendSellHistoryInfo,
+  sendBuyHistoryInfo,
+  sendSellOrderInfo,
+  sendBuyOrderInfo,
+  sendActiveOrderInfo,
+  sendCanceledOrderInfo,
+  sendFulfilledOrderInfo,
+  sendChartInfo,
+} = require('../publisher');
+const { getLogger } = require('../utils/logger');
+// const { Utils } = require('rweb3');
 const { getContractMetadata, isMainnet } = require('../config');
 const { BLOCK_0_TIMESTAMP, SATOSHI_CONVERSION, fill } = require('../constants');
 const { db, DBHelper } = require('../db');
@@ -20,18 +34,17 @@ const FulfillOrder = require('../models/fulfillOrder');
 const Trade = require('../models/trade');
 const MarketMaker = require('../models/marketMaker');
 const FundRedeem = require('../models/fundRedeem');
-const OrderFulfilled = require('../models/orderFulfilled');
+// const OrderFulfilled = require('../models/orderFulfilled');
 const Market = require('../models/market');
 const Token = require('../api/token');
 const wallet = require('../api/wallet');
 const network = require('../api/network');
 const exchange = require('../api/exchange');
 const { getInstance } = require('../rclient');
-const { txState, orderState } = require('../constants');
-const async = require("async");
-const Web3 = require('web3')
+const { orderState } = require('../constants');
+// const { txState } = require('../constants');
+
 const web3 = new Web3();
-const abi = require('ethjs-abi');
 
 // Example to hash event functions
 // console.log(Web3.utils.sha3('ListingCreated(address,string,string,string,uint8,uint8,uint256)'))
@@ -50,37 +63,35 @@ looptimes['1h'] = 3600;
 looptimes['3h'] = 10800;
 looptimes['6h'] = 21600;
 looptimes['12h'] = 43200;
-looptimes['d'] = 86400;
-looptimes['w'] = 604800;
+looptimes.d = 86400;
+looptimes.w = 604800;
 
-const insertEmptyCandles = async (timeNow, t, address) => {
-    return new Promise(async (resolve) => {
-      const f = async () => {
-        const ohlc = await db.Charts.cfind({ tokenAddress: address, timeTable: t }).sort({ time: -1 }).limit(1).exec();
-        // console.log('timeNow: ' + (timeNow - looptimes[t]));
-        // console.log('ohlc[0].time: ' + ohlc[0].time);
+const insertEmptyCandles = async (timeNow, t, address) => new Promise(async (resolve) => {
+  const f = async () => {
+    const ohlc = await db.Charts.cfind({ tokenAddress: address, timeTable: t }).sort({ time: -1 }).limit(1).exec();
+    // console.log('timeNow: ' + (timeNow - looptimes[t]));
+    // console.log('ohlc[0].time: ' + ohlc[0].time);
 
-        if (timeNow - looptimes[t] > ohlc[0].time) {
-          const ohlc_change = {
-            tokenAddress: address,
-            timeTable: t,
-            time: ohlc[0].time + looptimes[t],
-            open: ohlc[0].close,
-            high: ohlc[0].close,
-            low: ohlc[0].close,
-            close: ohlc[0].close,
-            volume: 0,
-          };
-          await db.Charts.insert(ohlc_change);
-          sendChartInfo(ohlc_change.tokenAddress, ohlc_change.timeTable, ohlc_change.time, ohlc_change.open, ohlc_change.high, ohlc_change.low, ohlc_change.close, ohlc_change.volume);
-          await f();
-        } else {
-          resolve();
-        }
-      }
+    if (timeNow - looptimes[t] > ohlc[0].time) {
+      const ohlc_change = {
+        tokenAddress: address,
+        timeTable: t,
+        time: ohlc[0].time + looptimes[t],
+        open: ohlc[0].close,
+        high: ohlc[0].close,
+        low: ohlc[0].close,
+        close: ohlc[0].close,
+        volume: 0,
+      };
+      await db.Charts.insert(ohlc_change);
+      sendChartInfo(ohlc_change.tokenAddress, ohlc_change.timeTable, ohlc_change.time, ohlc_change.open, ohlc_change.high, ohlc_change.low, ohlc_change.close, ohlc_change.volume);
       await f();
-    });
-}
+    } else {
+      resolve();
+    }
+  };
+  await f();
+});
 
 const updateEmptyCandles = async (db) => {
   const markets = await db.Markets.find({});
@@ -91,7 +102,7 @@ const updateEmptyCandles = async (db) => {
       await insertEmptyCandles(timeNow, t, market.address);
     }
   }
-}
+};
 
 function sequentialLoop(iterations, process, exit) {
   let index = 0;
@@ -209,17 +220,17 @@ async function sync(db) {
     },
     async () => {
       if (numOfIterations > 0) {
-          sendSyncInfo(
-            currentBlockCount,
-            currentBlockTime,
-            await calculateSyncPercent(currentBlockCount, currentBlockTime),
-            await network.getPeerNodeCount(),
-            await getAddressBalances(),
-          );
-        }
-        getLogger().debug('sleep');
-        setTimeout(startSync, 5000);
-        setTimeout(updateEmptyCandles, 200000, db);
+        sendSyncInfo(
+          currentBlockCount,
+          currentBlockTime,
+          await calculateSyncPercent(currentBlockCount, currentBlockTime),
+          await network.getPeerNodeCount(),
+          await getAddressBalances(),
+        );
+      }
+      getLogger().debug('sleep');
+      setTimeout(startSync, 5000);
+      setTimeout(updateEmptyCandles, 200000, db);
       // execute rpc batch by batch
     },
   );
@@ -231,8 +242,8 @@ async function syncTokenListingCreated(db, startBlock, endBlock, removeHexPrefix
   const ListingCreatedPromises = [];
   try {
     result = await getInstance().searchLogs(
-      startBlock, endBlock, MetaData['Registery']['Address'],
-      [MetaData['Registery']['ListingCreated']], MetaData, removeHexPrefix,
+      startBlock, endBlock, MetaData.Registery.Address,
+      [MetaData.Registery.ListingCreated], MetaData, removeHexPrefix,
     );
     getLogger().debug('searchlog ListingCreated');
   } catch (err) {
@@ -245,12 +256,12 @@ async function syncTokenListingCreated(db, startBlock, endBlock, removeHexPrefix
     const blockNum = event.blockNumber;
     const txid = event.transactionHash;
     _.forEachRight(event.log, (rawLog) => {
-      let topics = rawLog.topics.map(i => '0x' + i );
-      const data = '0x' + rawLog.data;
-      const OutputBytecode = abi.decodeEvent(MetaData['Registery']['Abi'][7], data, topics);
+      const topics = rawLog.topics.map((i) => `0x${i}`);
+      const data = `0x${rawLog.data}`;
+      const OutputBytecode = abi.decodeEvent(MetaData.Registery.Abi[7], data, topics);
 
       if (OutputBytecode._eventName === 'ListingCreated') {
-        const insertListingCreated= new Promise(async (resolve) => {
+        const insertListingCreated = new Promise(async (resolve) => {
           try {
             const market = new Market(OutputBytecode).translate();
             const marketAddress = market.address;
@@ -299,8 +310,8 @@ async function syncTokenListingUpdated(db, startBlock, endBlock, removeHexPrefix
   const ListingUpdatedPromises = [];
   try {
     result = await getInstance().searchLogs(
-      startBlock, endBlock, MetaData['Registery']['Address'],
-      [MetaData['Registery']['ListingUpdated']], MetaData, removeHexPrefix,
+      startBlock, endBlock, MetaData.Registery.Address,
+      [MetaData.Registery.ListingUpdated], MetaData, removeHexPrefix,
     );
     getLogger().debug('searchlog ListingUpdated');
   } catch (err) {
@@ -313,43 +324,41 @@ async function syncTokenListingUpdated(db, startBlock, endBlock, removeHexPrefix
     const blockNum = event.blockNumber;
     const txid = event.transactionHash;
     _.forEachRight(event.log, (rawLog) => {
-      let topics = rawLog.topics.map(i => '0x' + i );
-      const data = '0x' + rawLog.data;
-      const OutputBytecode = abi.decodeEvent(MetaData['Registery']['Abi'][8], data, topics);
+      const topics = rawLog.topics.map((i) => `0x${i}`);
+      const data = `0x${rawLog.data}`;
+      const OutputBytecode = abi.decodeEvent(MetaData.Registery.Abi[8], data, topics);
 
       if (OutputBytecode._eventName === 'ListingUpdated') {
-        const insertListingUpdated= new Promise(async (resolve) => {
+        const insertListingUpdated = new Promise(async (resolve) => {
           try {
             const market = new Market(OutputBytecode).translate();
             const marketAddress = market.address;
 
             if (await DBHelper.getCount(db.Markets, { address: marketAddress }) > 0) {
               const getMarket = await DBHelper.findOne(db.Markets, { address: marketAddress });
-              /// Rename Chart File
-              const oldSrc = blockchainDataPath + '/' + getMarket.market + '.tsv';
-              const newSrc = blockchainDataPath + '/' + market.market + '.tsv';
+              // / Rename Chart File
+              const oldSrc = `${blockchainDataPath}/${getMarket.market}.tsv`;
+              const newSrc = `${blockchainDataPath}/${market.market}.tsv`;
               if (oldSrc !== newSrc) {
-                fs.rename(oldSrc, newSrc, function (err) {
+                fs.rename(oldSrc, newSrc, (err) => {
                   if (err) throw err;
                 });
               }
               await DBHelper.updateMarketByQuery(db.Markets, { address: marketAddress }, market);
-              ///
+              // /
             } else {
-              db.Markets.insert(market).then((value)=>{
-                /// init Chart File
+              db.Markets.insert(market).then((value) => {
+                // / init Chart File
                 const addMarket = market.market;
-                const dataSrc = blockchainDataPath + '/' + addMarket + '.tsv';
-                if (!fs.existsSync(dataSrc)){
-                  fs.writeFile(dataSrc, 'date\topen\thigh\tlow\tclose\tvolume\n2018-01-01\t0\t0\t0\t0\t0\n2018-01-02\t0\t0\t0\t0\t0\n', { flag: 'w' }, function(err) {
-                    if (err)
-                      return console.error(err);
+                const dataSrc = `${blockchainDataPath}/${addMarket}.tsv`;
+                if (!fs.existsSync(dataSrc)) {
+                  fs.writeFile(dataSrc, 'date\topen\thigh\tlow\tclose\tvolume\n2018-01-01\t0\t0\t0\t0\t0\n2018-01-02\t0\t0\t0\t0\t0\n', { flag: 'w' }, (err) => {
+                    if (err) return console.error(err);
                   });
                 }
                 fs.closeSync(fs.openSync(dataSrc, 'a'));
-                ///
+                // /
               });
-
             }
             await DBHelper.changeMarketByQuery(db.NewOrder, { sellToken: marketAddress }, market);
             await DBHelper.changeMarketByQuery(db.NewOrder, { buyToken: marketAddress }, market);
@@ -376,8 +385,8 @@ async function syncTokenListingDeleted(db, startBlock, endBlock, removeHexPrefix
   const ListingUpdatedPromises = [];
   try {
     result = await getInstance().searchLogs(
-      startBlock, endBlock, MetaData['Registery']['Address'],
-      [MetaData['Registery']['ListingDeleted']], MetaData, removeHexPrefix,
+      startBlock, endBlock, MetaData.Registery.Address,
+      [MetaData.Registery.ListingDeleted], MetaData, removeHexPrefix,
     );
     getLogger().debug('searchlog ListingDeleted');
   } catch (err) {
@@ -390,12 +399,12 @@ async function syncTokenListingDeleted(db, startBlock, endBlock, removeHexPrefix
     const blockNum = event.blockNumber;
     const txid = event.transactionHash;
     _.forEachRight(event.log, (rawLog) => {
-      let topics = rawLog.topics.map(i => '0x' + i );
-      const data = '0x' + rawLog.data;
-      const OutputBytecode = abi.decodeEvent(MetaData['Registery']['Abi'][9], data, topics);
+      const topics = rawLog.topics.map((i) => `0x${i}`);
+      const data = `0x${rawLog.data}`;
+      const OutputBytecode = abi.decodeEvent(MetaData.Registery.Abi[9], data, topics);
 
       if (OutputBytecode._eventName === 'ListingDeleted') {
-        const insertListingUpdated= new Promise(async (resolve) => {
+        const insertListingUpdated = new Promise(async (resolve) => {
           try {
             const market = {
               token: 'Unregistered',
@@ -403,7 +412,7 @@ async function syncTokenListingDeleted(db, startBlock, endBlock, removeHexPrefix
             };
             const marketAddress = OutputBytecode._address;
 
-            await DBHelper.removeOrdersByQuery(db.Markets, { address: marketAddress});
+            await DBHelper.removeOrdersByQuery(db.Markets, { address: marketAddress });
             await DBHelper.changeMarketByQuery(db.NewOrder, { sellToken: marketAddress }, market);
             await DBHelper.changeMarketByQuery(db.NewOrder, { buyToken: marketAddress }, market);
             await DBHelper.changeMarketByQuery(db.OrderFulfilled, { sellToken: marketAddress }, market);
@@ -503,7 +512,7 @@ function sendSyncInfo(syncBlockNum, syncBlockTime, syncPercent, peerNodeCount, a
 async function getAddressBalances() {
   const addressObjs = [];
   const addressList = [];
- try {
+  try {
     const res = await getInstance().listAddressGroupings();
     // grouping: [["qNh8krU54KBemhzX4zWG9h3WGpuCNYmeBd", 0.01], ["qNh8krU54KBemhzX4zWG9h3WGpuCNYmeBd", 0.02]], [...]
     _.each(res, (grouping) => {
@@ -523,7 +532,7 @@ async function getAddressBalances() {
   } catch (err) {
     getLogger().error(`listAddressGroupings: ${err.message}`);
   }
-  ////////////////////////////////////////////////////////////
+  // //////////////////////////////////////////////////////////
   const addressBatches = _.chunk(addressList, RPC_BATCH_SIZE);
   await new Promise(async (resolve) => {
     sequentialLoop(addressBatches.length, async (loop) => {
@@ -535,23 +544,23 @@ async function getAddressBalances() {
 
       _.map(addressBatches[loop.iteration()], async (address) => {
         const ExchangeBasePromise = new Promise(async (ExchangeBaseResolve) => {
-            try {
-              let Balance = new BigNumber(0);
-              const hex = await getInstance().getHexAddress(address);
-              const resp = await exchange.balanceOf({
-                token: MetaData['BaseCurrency']['Address'],
-                user: hex,
-                senderAddress: address,
-                exchangeAddress: MetaData['Exchange']['Address'],
-                abi: MetaData['Exchange']['Abi'],
-              });
-              Balance = await Utils.hexToDecimalString(resp.executionResult.formattedOutput[0]);
-              const found = _.find(addressObjs, { address });
-              found['Exchange'][MetaData['BaseCurrency']['Pair']] = await new BigNumber(Balance).dividedBy(SATOSHI_CONVERSION).toString(10);
-              ExchangeBaseResolve();
-            } catch (err) {
-              getLogger().error(`BalanceOf ${address}: ${err.message}`);
-            }
+          try {
+            let Balance = new BigNumber(0);
+            const hex = await getInstance().getHexAddress(address);
+            const resp = await exchange.balanceOf({
+              token: MetaData.BaseCurrency.Address,
+              user: hex,
+              senderAddress: address,
+              exchangeAddress: MetaData.Exchange.Address,
+              abi: MetaData.Exchange.Abi,
+            });
+            Balance = await Utils.hexToDecimalString(resp.executionResult.formattedOutput[0]);
+            const found = _.find(addressObjs, { address });
+            found.Exchange[MetaData.BaseCurrency.Pair] = await new BigNumber(Balance).dividedBy(SATOSHI_CONVERSION).toString(10);
+            ExchangeBaseResolve();
+          } catch (err) {
+            getLogger().error(`BalanceOf ${address}: ${err.message}`);
+          }
         });
         ExchangeBasePromises.push(ExchangeBasePromise);
       });
@@ -560,21 +569,21 @@ async function getAddressBalances() {
       _.map(addressBatches[loop.iteration()], async (address) => {
         const ExchangeTokenPromise = new Promise(async (ExchangeTokenResolver) => {
           let ExchangeTokenCounter = 0;
-          for await (const ExchangeToken of markets) {
+          for (const ExchangeToken of markets) {
             try {
               console.log(ExchangeToken);
               let Balance = new BigNumber(0);
               const hex = await getInstance().getHexAddress(address);
               const resp = await exchange.balanceOf({
-                token: ExchangeToken['address'],
+                token: ExchangeToken.address,
                 user: hex,
                 senderAddress: address,
-                exchangeAddress: MetaData['Exchange']['Address'],
-                abi: MetaData['Exchange']['Abi'],
+                exchangeAddress: MetaData.Exchange.Address,
+                abi: MetaData.Exchange.Abi,
               });
               Balance = Utils.hexToDecimalString(resp.executionResult.formattedOutput[0]);
               const found = _.find(addressObjs, { address });
-              found['Exchange'][ExchangeToken['market']] = await new BigNumber(Balance).dividedBy(10 ** ExchangeToken['decimals']).toString(10);
+              found.Exchange[ExchangeToken.market] = await new BigNumber(Balance).dividedBy(10 ** ExchangeToken.decimals).toString(10);
               ExchangeTokenCounter++;
               if (ExchangeTokenCounter == Object.keys(markets).length) {
                 getLogger().debug('Exchange Token Parent Done');
@@ -583,7 +592,7 @@ async function getAddressBalances() {
             } catch (err) {
               getLogger().error(`BalanceOf ${address}: ${err.message}`);
             }
-          };
+          }
         });
         ExchangeTokenPromises.push(ExchangeTokenPromise);
       });
@@ -592,20 +601,20 @@ async function getAddressBalances() {
       _.map(addressBatches[loop.iteration()], async (address) => {
         const WalletTokenPromise = new Promise(async (WalletTokenResolve) => {
           let WalletTokenCounter = 0;
-          for await (const WalletToken of markets) {
+          for (const WalletToken of markets) {
             try {
-              const myAbi = MetaData['TokenAbi'][WalletToken.abi]
+              const myAbi = MetaData.TokenAbi[WalletToken.abi];
               let Balance = new BigNumber(0);
               const resp = await Token.balanceOf({
                 owner: address,
                 senderAddress: address,
-                token: WalletToken['market'],
-                tokenAddress: WalletToken['address'],
+                token: WalletToken.market,
+                tokenAddress: WalletToken.address,
                 abi: myAbi,
               });
               Balance = resp.balance;
               const found = _.find(addressObjs, { address });
-              found['Wallet'][WalletToken['market']] = new BigNumber(Balance).dividedBy(10 ** WalletToken['decimals']).toString(10);
+              found.Wallet[WalletToken.market] = new BigNumber(Balance).dividedBy(10 ** WalletToken.decimals).toString(10);
               WalletTokenCounter++;
               if (WalletTokenCounter == Object.keys(markets).length) {
                 getLogger().debug('Wallet Token Parent Done');
@@ -614,38 +623,36 @@ async function getAddressBalances() {
             } catch (err) {
               getLogger().error(`BalanceOf ${address}: ${err.message}`);
             }
-          };
+          }
         });
 
         BalancePromises.push(WalletTokenPromise);
-
       });
       await Promise.all(BalancePromises);
 
       _.map(addressBatches[loop.iteration()], async (address) => {
-          const StringPromise = new Promise(async (StringResolve) => {
-            async.forEach(markets, async (ExchangeToken, callback) => {
-              try {
+        const StringPromise = new Promise(async (StringResolve) => {
+          async.forEach(markets, async (ExchangeToken, callback) => {
+            try {
               const found = await _.find(addressObjs, { address });
               found.balance = JSON.stringify(found);
               StringResolve();
-              } catch (err) {
-                getLogger().error(`BalanceOf ${address}: ${err.message}`);
-              }
-            });
+            } catch (err) {
+              getLogger().error(`BalanceOf ${address}: ${err.message}`);
+            }
           });
-
-          StringPromises.push(StringPromise);
         });
+
+        StringPromises.push(StringPromise);
+      });
       await Promise.all(StringPromises);
       loop.next();
-
     }, () => {
       resolve();
     });
   });
 
-  ///////////////////////////////////////////////////////////
+  // /////////////////////////////////////////////////////////
 
   // Add default address with zero balances if no address was used before ¯\_(ツ)_/¯
   if (_.isEmpty(addressObjs)) {
@@ -659,7 +666,7 @@ async function getAddressBalances() {
       } catch (err) {
         if (err.response.status == 500) {
           try {
-            console.log(err.response.status + ': No Wallet found, Creating new...');
+            console.log(`${err.response.status}: No Wallet found, Creating new...`);
             address = await wallet.getNewAddress('default');
           } catch (err) {
             console.log(err);
@@ -669,20 +676,20 @@ async function getAddressBalances() {
 
       address = Object.keys(address)[0];
 
-      emptyObject['address'] = Object.keys(address)[0];
-      emptyObject['Wallet'] = {};
-      emptyObject['Exchange'] = {};
-      emptyObject['address'] = address;
-        for (EmptyTokenNames in MetaData['Tokens']) {
-          emptyObject['Exchange'][MetaData['Tokens'][EmptyTokenNames]['Pair']] = '0';
-          emptyObject['Wallet'][MetaData['Tokens'][EmptyTokenNames]['Pair']] = '0';
-        }
-        emptyObject['Exchange'][MetaData['BaseCurrency']['Pair']] = '0';
-        emptyObject['Wallet'][MetaData['BaseCurrency']['Pair']] = '0';
-        emptyObject['balance'] = JSON.stringify(emptyObject);
-        addressObjs.push(
-          emptyObject,
-        );
+      emptyObject.address = Object.keys(address)[0];
+      emptyObject.Wallet = {};
+      emptyObject.Exchange = {};
+      emptyObject.address = address;
+      for (EmptyTokenNames in MetaData.Tokens) {
+        emptyObject.Exchange[MetaData.Tokens[EmptyTokenNames].Pair] = '0';
+        emptyObject.Wallet[MetaData.Tokens[EmptyTokenNames].Pair] = '0';
+      }
+      emptyObject.Exchange[MetaData.BaseCurrency.Pair] = '0';
+      emptyObject.Wallet[MetaData.BaseCurrency.Pair] = '0';
+      emptyObject.balance = JSON.stringify(emptyObject);
+      addressObjs.push(
+        emptyObject,
+      );
     } catch (err) {
       console.log(err);
     }
@@ -701,8 +708,8 @@ async function syncNewOrder(db, startBlock, endBlock, removeHexPrefix) {
   const markets = await db.Markets.find({});
   try {
     result = await getInstance().searchLogs(
-      startBlock, endBlock, MetaData['Exchange']['Address'],
-      [MetaData['Exchange']['NewOrder']], MetaData, removeHexPrefix,
+      startBlock, endBlock, MetaData.Exchange.Address,
+      [MetaData.Exchange.NewOrder], MetaData, removeHexPrefix,
     );
     getLogger().debug('searchlog New Order');
   } catch (err) {
@@ -715,15 +722,14 @@ async function syncNewOrder(db, startBlock, endBlock, removeHexPrefix) {
     const blockNum = event.blockNumber;
     const txid = event.transactionHash;
     _.forEachRight(event.log, (rawLog) => {
-
-      const topics = rawLog.topics.map(i => '0x' + i );
-      const data = '0x' + rawLog.data;
-      const OutputBytecode = abi.decodeEvent(MetaData['Exchange']['Abi'][16], data, topics);
+      const topics = rawLog.topics.map((i) => `0x${i}`);
+      const data = `0x${rawLog.data}`;
+      const OutputBytecode = abi.decodeEvent(MetaData.Exchange.Abi[16], data, topics);
 
       if (OutputBytecode._eventName === 'NewOrder' && parseInt(OutputBytecode._time.toString(10)) !== 0) {
         const insertNewOrderDB = new Promise(async (resolve) => {
           try {
-            const newOrder = await new NewOrder(blockNum, txid, OutputBytecode, markets, MetaData['BaseCurrency']['Address']).translate();
+            const newOrder = await new NewOrder(blockNum, txid, OutputBytecode, markets, MetaData.BaseCurrency.Address).translate();
             if (await DBHelper.getCount(db.NewOrder, { txid }) > 0) {
               DBHelper.updateOrderByQuery(db.NewOrder, { txid }, newOrder);
             } else {
@@ -742,7 +748,6 @@ async function syncNewOrder(db, startBlock, endBlock, removeHexPrefix) {
         createNewOrderPromises.push(insertNewOrderDB);
       }
     });
-
   });
   await Promise.all(createNewOrderPromises);
 }
@@ -751,8 +756,8 @@ async function syncOrderCancelled(db, startBlock, endBlock, removeHexPrefix) {
   let result;
   try {
     result = await getInstance().searchLogs(
-      startBlock, endBlock, MetaData['Exchange']['Address'],
-      [MetaData['Exchange']['OrderCancelled']], MetaData, removeHexPrefix,
+      startBlock, endBlock, MetaData.Exchange.Address,
+      [MetaData.Exchange.OrderCancelled], MetaData, removeHexPrefix,
     );
     getLogger().debug('searchlog OrderCancelled');
   } catch (err) {
@@ -767,11 +772,11 @@ async function syncOrderCancelled(db, startBlock, endBlock, removeHexPrefix) {
     const blockNum = event.blockNumber;
     const txid = event.transactionHash;
     _.forEachRight(event.log, (rawLog) => {
-      const topics = rawLog.topics.map(i => '0x' + i );
-      const data = '0x' + rawLog.data;
-      const OutputBytecode = abi.decodeEvent(MetaData['Exchange']['Abi'][17],
-      data,
-      topics);
+      const topics = rawLog.topics.map((i) => `0x${i}`);
+      const data = `0x${rawLog.data}`;
+      const OutputBytecode = abi.decodeEvent(MetaData.Exchange.Abi[17],
+        data,
+        topics);
       if (OutputBytecode._eventName === 'OrderCancelled') {
         const removeNewOrderDB = new Promise(async (resolve) => {
           try {
@@ -797,8 +802,8 @@ async function syncOrderFulfilled(db, startBlock, endBlock, removeHexPrefix) {
   let result;
   try {
     result = await getInstance().searchLogs(
-      startBlock, endBlock, MetaData['Exchange']['Address'],
-      [MetaData['Exchange']['OrderFulfilled']], MetaData, removeHexPrefix,
+      startBlock, endBlock, MetaData.Exchange.Address,
+      [MetaData.Exchange.OrderFulfilled], MetaData, removeHexPrefix,
     );
     getLogger().debug('searchlog OrderFulfilled');
   } catch (err) {
@@ -813,11 +818,11 @@ async function syncOrderFulfilled(db, startBlock, endBlock, removeHexPrefix) {
     const blockNum = event.blockNumber;
     const txid = event.transactionHash;
     _.forEachRight(event.log, (rawLog) => {
-      const topics = rawLog.topics.map(i => '0x' + i );
-      const data = '0x' + rawLog.data;
-      const OutputBytecode = abi.decodeEvent(MetaData['Exchange']['Abi'][18],
-      data,
-      topics);
+      const topics = rawLog.topics.map((i) => `0x${i}`);
+      const data = `0x${rawLog.data}`;
+      const OutputBytecode = abi.decodeEvent(MetaData.Exchange.Abi[18],
+        data,
+        topics);
       if (OutputBytecode._eventName === 'OrderFulfilled') {
         if (parseInt(OutputBytecode._time.toString(10)) > 10000000) {
           const fulfillOrderDB = new Promise(async (resolve) => {
@@ -825,7 +830,7 @@ async function syncOrderFulfilled(db, startBlock, endBlock, removeHexPrefix) {
               const fulfillOrder = new FulfillOrder(blockNum, txid, OutputBytecode).translate();
               const orderId = fulfillOrder.orderId;
               await DBHelper.updateFulfilledOrdersByQuery(db.NewOrder, { orderId }, fulfillOrder);
-              //await DBHelper.removeOrdersByQuery(db.NewOrder, { orderId: fulfillOrder.orderId });
+              // await DBHelper.removeOrdersByQuery(db.NewOrder, { orderId: fulfillOrder.orderId });
               const getOrder = await DBHelper.findOne(db.NewOrder, { orderId });
               sendFulfilledOrderInfo(getOrder.txid, getOrder.orderId, getOrder.owner, getOrder.token, getOrder.tokenName, getOrder.price, getOrder.type, getOrder.orderType, getOrder.sellToken, getOrder.buyToken, getOrder.priceMul, getOrder.priceDiv, getOrder.time, getOrder.amount, getOrder.startAmount, getOrder.blockNum, getOrder.status, getOrder.decimals);
               resolve();
@@ -844,13 +849,12 @@ async function syncOrderFulfilled(db, startBlock, endBlock, removeHexPrefix) {
 }
 
 
-
 function readFile(srcPath) {
-  return new Promise(function (resolve, reject) {
+  return new Promise(((resolve, reject) => {
     try {
-      fs.readFile(srcPath, 'utf8', function (err, data) {
+      fs.readFile(srcPath, 'utf8', (err, data) => {
         if (err) {
-          reject(err)
+          reject(err);
         } else {
           resolve(data);
         }
@@ -858,25 +862,24 @@ function readFile(srcPath) {
     } catch (err) {
       getLogger().error(`ERROR: ${err.message}`);
     }
-  })
+  }));
 }
 
 
-
-async function addTrade(rawLog, blockNum, txid){
+async function addTrade(rawLog, blockNum, txid) {
   const getOrder = await DBHelper.findOne(db.NewOrder, { orderId: rawLog._orderId.toString(10) });
-  //const getOrder = await DBHelper.findTradeAndUpdate(db.NewOrder, { orderId: rawLog._orderId.toString(10) }, rawLog._amount.toString());
+  // const getOrder = await DBHelper.findTradeAndUpdate(db.NewOrder, { orderId: rawLog._orderId.toString(10) }, rawLog._amount.toString());
   const trade = new Trade(blockNum, txid, rawLog, getOrder).translate();
-  const orderId = trade.orderId
+  const orderId = trade.orderId;
   const newAmount = Number(getOrder.amount) - Number(trade.soldTokens);
   const updateOrder = {
     amount: newAmount,
-  }
+  };
   try {
     if (await DBHelper.getCount(db.Trade, { txid }) > 0) {
       await DBHelper.updateTradeByQuery(db.Trade, { txid }, trade);
     } else {
-      await DBHelper.insertTopic(db.Trade, trade)
+      await DBHelper.insertTopic(db.Trade, trade);
     }
     await DBHelper.updateTradeOrderByQuery(db.NewOrder, { orderId }, updateOrder);
 
@@ -947,11 +950,11 @@ async function addTrade(rawLog, blockNum, txid){
 
 async function topicFiller(topics) {
   try {
-    if(topics.length < 4){
-        topics.push(fill.topic);
-        return await topicFiller(topics);
+    if (topics.length < 4) {
+      topics.push(fill.topic);
+      return await topicFiller(topics);
     }
-    else return topics;
+    return topics;
   } catch (err) {
     getLogger().error(`ERROR: ${err.message}`);
   }
@@ -966,8 +969,8 @@ async function syncTrade(db, startBlock, endBlock, removeHexPrefix) {
   const blockchainDataPath = Utils.getDataDir();
   try {
     result = await getInstance().searchLogs(
-      startBlock, endBlock, MetaData['Exchange']['Address'],
-      [MetaData['Exchange']['Trade']], MetaData, removeHexPrefix,
+      startBlock, endBlock, MetaData.Exchange.Address,
+      [MetaData.Exchange.Trade], MetaData, removeHexPrefix,
     );
     getLogger().debug('searchlog syncTrade');
   } catch (err) {
@@ -977,14 +980,14 @@ async function syncTrade(db, startBlock, endBlock, removeHexPrefix) {
 
   getLogger().debug(`${startBlock} - ${endBlock}: Retrieved ${result.length} entries from syncTrade`);
 
-  for (let event of result){
+  for (const event of result) {
     const blockNum = event.blockNumber;
     const txid = event.transactionHash;
-    for (let rawLog of event.log){
-      topics = rawLog.topics.map(i => '0x' + i );
-      data = '0x' + rawLog.data;
+    for (const rawLog of event.log) {
+      topics = rawLog.topics.map((i) => `0x${i}`);
+      data = `0x${rawLog.data}`;
       topics = await topicFiller(topics);
-      let OutputBytecode = await abi.decodeEvent(MetaData['Exchange']['Abi'][20], data, topics);
+      const OutputBytecode = await abi.decodeEvent(MetaData.Exchange.Abi[20], data, topics);
 
       if (OutputBytecode._eventName === 'Trade' && parseInt(OutputBytecode._time.toString(10)) !== 0) {
         const trade = await addTrade(OutputBytecode, blockNum, txid);
@@ -994,21 +997,20 @@ async function syncTrade(db, startBlock, endBlock, removeHexPrefix) {
 }
 
 function dynamicSort(property) {
-  var sortOrder = 1;
-  if(property[0] === "-") {
+  let sortOrder = 1;
+  if (property[0] === '-') {
     sortOrder = -1;
     property = property.substr(1);
   }
-  return function (a,b) {
-    if(sortOrder == -1){
+  return function (a, b) {
+    if (sortOrder == -1) {
       return b[property].toString().localeCompare(a[property]);
-    } else {
-      return a[property].toString().localeCompare(b[property]);
     }
-  }
+    return a[property].toString().localeCompare(b[property]);
+  };
 }
 
-function getPercentageChange(oldNumber, newNumber){
+function getPercentageChange(oldNumber, newNumber) {
   const decreaseValue = oldNumber - newNumber;
   return (decreaseValue / oldNumber) * 100;
 }
@@ -1022,74 +1024,73 @@ async function syncMarkets(db, startBlock, endBlock, removeHexPrefix) {
       let volume = 0;
       let filled = 0;
       let minSellPrice = 0;
-      for (var key in markets){
-            change = 0;
-            volume = 0;
-            filled = 0;
-            minSellPrice = 0;
-            const unixTime = Date.now();
-            var inputDate = unixTime - 84600000; // 24 hours
-            const trades = await DBHelper.find(
-                    db.Trade,
-                      {
-                        $and: [
-                        { 'date': { $gt: new Date(inputDate) } },
-                        { token: markets[key]['market'] },
-                        ]
-                      },
-                    ['time', 'tokenName', 'date', 'price', 'amount', 'orderType', 'boughtTokens', 'soldTokens'],
-                  );
-            const sortedTrades = trades.sort((a, b) => a.time - b.time);
-            const first = _.first(sortedTrades);
-            const last = _.last(sortedTrades);
-            if (first !== undefined && last !== undefined) {
-              change = getPercentageChange(last.price, first.price);
-            } else{
-              change = 0;
-            }
-            for (trade in sortedTrades) {
-              if (sortedTrades[trade].orderType === 'SELLORDER') {
-                filled = sortedTrades[trade].boughtTokens / 1e8;
-                volume = volume + filled;
-              }
-              if (sortedTrades[trade].orderType === 'BUYORDER') {
-                filled = sortedTrades[trade].soldTokens / 1e8;
-                volume = volume + filled;
-              }
-            }
-            const orders = await DBHelper.find(
-                    db.NewOrder,
-                      {
-                        $and: [
-                        { token: markets[key]['market'] },
-                        { status: orderState.ACTIVE },
-                        { orderType: 'SELLORDER' },
-                        ]
-                      },
-                    ['status', 'tokenName', 'price',],
-                  );
-            if (orders !== undefined) {
-              minSellPrice = Math.min.apply(Math, orders.map(function(order) { return order.price; }));
-            }
-            if (minSellPrice === Infinity) {
-              minSellPrice = 0;
-            }
-            const obj = {
-              market: markets[key]['market'],
-              change: change.toFixed(2),
-              volume,
-              tokenName: markets[key]['tokenName'],
-              price: minSellPrice,
-              address: markets[key]['address'],
-              abi: markets[key]['abi'],
-            }
-            await DBHelper.updateMarketsByQuery(db.Markets, { market: obj.market }, obj);
-      };
-      //await DBHelper.updateMarketsByQuery(db.Markets, { market: obj.market }, obj);
-      //await DBHelper.updateOrderByQuery(db.NewOrder, { orderId }, updateOrder);
+      for (const key in markets) {
+        change = 0;
+        volume = 0;
+        filled = 0;
+        minSellPrice = 0;
+        const unixTime = Date.now();
+        const inputDate = unixTime - 84600000; // 24 hours
+        const trades = await DBHelper.find(
+          db.Trade,
+          {
+            $and: [
+              { date: { $gt: new Date(inputDate) } },
+              { token: markets[key].market },
+            ],
+          },
+          ['time', 'tokenName', 'date', 'price', 'amount', 'orderType', 'boughtTokens', 'soldTokens'],
+        );
+        const sortedTrades = trades.sort((a, b) => a.time - b.time);
+        const first = _.first(sortedTrades);
+        const last = _.last(sortedTrades);
+        if (first !== undefined && last !== undefined) {
+          change = getPercentageChange(last.price, first.price);
+        } else {
+          change = 0;
+        }
+        for (trade in sortedTrades) {
+          if (sortedTrades[trade].orderType === 'SELLORDER') {
+            filled = sortedTrades[trade].boughtTokens / 1e8;
+            volume += filled;
+          }
+          if (sortedTrades[trade].orderType === 'BUYORDER') {
+            filled = sortedTrades[trade].soldTokens / 1e8;
+            volume += filled;
+          }
+        }
+        const orders = await DBHelper.find(
+          db.NewOrder,
+          {
+            $and: [
+              { token: markets[key].market },
+              { status: orderState.ACTIVE },
+              { orderType: 'SELLORDER' },
+            ],
+          },
+          ['status', 'tokenName', 'price'],
+        );
+        if (orders !== undefined) {
+          minSellPrice = Math.min.apply(Math, orders.map((order) => order.price));
+        }
+        if (minSellPrice === Infinity) {
+          minSellPrice = 0;
+        }
+        const obj = {
+          market: markets[key].market,
+          change: change.toFixed(2),
+          volume,
+          tokenName: markets[key].tokenName,
+          price: minSellPrice,
+          address: markets[key].address,
+          abi: markets[key].abi,
+        };
+        await DBHelper.updateMarketsByQuery(db.Markets, { market: obj.market }, obj);
+      }
+      // await DBHelper.updateMarketsByQuery(db.Markets, { market: obj.market }, obj);
+      // await DBHelper.updateOrderByQuery(db.NewOrder, { orderId }, updateOrder);
       getLogger().debug('Markets Synced');
       resolve();
-
     } catch (err) {
       getLogger().error(`ERROR: ${err.message}`);
       resolve();
@@ -1104,8 +1105,8 @@ async function syncFundRedeem(db, startBlock, endBlock, removeHexPrefix) {
   let resultRedeem;
   try {
     resultFund = await getInstance().searchLogs(
-      startBlock, endBlock, MetaData['Exchange']['Address'],
-      [MetaData['Exchange']['Deposit']], MetaData, removeHexPrefix,
+      startBlock, endBlock, MetaData.Exchange.Address,
+      [MetaData.Exchange.Deposit], MetaData, removeHexPrefix,
     );
     getLogger().debug('searchlog syncFund');
   } catch (err) {
@@ -1114,8 +1115,8 @@ async function syncFundRedeem(db, startBlock, endBlock, removeHexPrefix) {
   }
   try {
     resultRedeem = await getInstance().searchLogs(
-      startBlock, endBlock, MetaData['Exchange']['Address'],
-      [MetaData['Exchange']['Withdrawal']], MetaData, removeHexPrefix,
+      startBlock, endBlock, MetaData.Exchange.Address,
+      [MetaData.Exchange.Withdrawal], MetaData, removeHexPrefix,
     );
     getLogger().debug('searchlog syncRedeem');
   } catch (err) {
@@ -1133,20 +1134,20 @@ async function syncFundRedeem(db, startBlock, endBlock, removeHexPrefix) {
     const blockNum = event.blockNumber;
     const txid = event.transactionHash;
     _.forEachRight(event.log, (rawLog) => {
-      const topics = rawLog.topics.map(i => '0x' + i );
-      const data = '0x' + rawLog.data;
-      const OutputBytecode = abi.decodeEvent(MetaData['Exchange']['Abi'][14],
-      data,
-      topics);
+      const topics = rawLog.topics.map((i) => `0x${i}`);
+      const data = `0x${rawLog.data}`;
+      const OutputBytecode = abi.decodeEvent(MetaData.Exchange.Abi[14],
+        data,
+        topics);
 
       if (OutputBytecode._eventName === 'Deposit' && parseInt(OutputBytecode._time.toString(10)) !== 64) {
         const fundDB = new Promise(async (resolve) => {
           try {
-            const fund = new FundRedeem(blockNum, txid, OutputBytecode, markets, MetaData['BaseCurrency']).translate();
+            const fund = new FundRedeem(blockNum, txid, OutputBytecode, markets, MetaData.BaseCurrency).translate();
             if (await DBHelper.getCount(db.FundRedeem, { txid }) > 0) {
               await DBHelper.updateFundRedeemByQuery(db.FundRedeem, { txid }, fund);
             } else {
-              await DBHelper.insertTopic(db.FundRedeem, fund)
+              await DBHelper.insertTopic(db.FundRedeem, fund);
             }
             sendFundRedeemInfo(
               fund.txid,
@@ -1157,7 +1158,7 @@ async function syncFundRedeem(db, startBlock, endBlock, removeHexPrefix) {
               fund.owner,
               fund.time,
               fund.amount,
-              fund.blockNum
+              fund.blockNum,
             );
             resolve();
           } catch (err) {
@@ -1174,19 +1175,19 @@ async function syncFundRedeem(db, startBlock, endBlock, removeHexPrefix) {
     const blockNum = event.blockNumber;
     const txid = event.transactionHash;
     _.forEachRight(event.log, (rawLog) => {
-      const topics = rawLog.topics.map(i => '0x' + i );
-      const data = '0x' + rawLog.data;
-      const OutputBytecode = abi.decodeEvent(MetaData['Exchange']['Abi'][15],
-      data,
-      topics);
+      const topics = rawLog.topics.map((i) => `0x${i}`);
+      const data = `0x${rawLog.data}`;
+      const OutputBytecode = abi.decodeEvent(MetaData.Exchange.Abi[15],
+        data,
+        topics);
       if (OutputBytecode._eventName === 'Withdrawal' && parseInt(OutputBytecode._time.toString(10)) !== 64) {
         const redeemDB = new Promise(async (resolve) => {
           try {
-            const redeem = new FundRedeem(blockNum, txid, OutputBytecode, markets, MetaData['BaseCurrency']).translate();
+            const redeem = new FundRedeem(blockNum, txid, OutputBytecode, markets, MetaData.BaseCurrency).translate();
             if (await DBHelper.getCount(db.FundRedeem, { txid }) > 0) {
               await DBHelper.updateFundRedeemByQuery(db.FundRedeem, { txid }, redeem);
             } else {
-              await DBHelper.insertTopic(db.FundRedeem, redeem)
+              await DBHelper.insertTopic(db.FundRedeem, redeem);
             }
             sendFundRedeemInfo(
               redeem.txid,
@@ -1197,7 +1198,7 @@ async function syncFundRedeem(db, startBlock, endBlock, removeHexPrefix) {
               redeem.owner,
               redeem.time,
               redeem.amount,
-              redeem.blockNum
+              redeem.blockNum,
             );
             resolve();
           } catch (err) {
@@ -1218,8 +1219,8 @@ async function syncMarketMaker(db, startBlock, endBlock, removeHexPrefix) {
   let result;
   try {
     result = await getInstance().searchLogs(
-      startBlock, endBlock, MetaData['Exchange']['Address'],
-      [MetaData['Exchange']['Trade']], MetaData, removeHexPrefix,
+      startBlock, endBlock, MetaData.Exchange.Address,
+      [MetaData.Exchange.Trade], MetaData, removeHexPrefix,
     );
     getLogger().debug('searchlog syncMarketMaker');
   } catch (err) {
@@ -1231,15 +1232,16 @@ async function syncMarketMaker(db, startBlock, endBlock, removeHexPrefix) {
   const createMarketMakerPromises = [];
 
   _.forEach(result, (event, index) => {
+    console.log(index);
     const blockNum = event.blockNumber;
     const txid = event.transactionHash;
     _.forEachRight(event.log, (rawLog) => {
       if (rawLog._eventName === 'MarketMaker') {
-        const removeNewOrderDB = new Promise(async (resolve) => {
+        const removeNewOrderDB = new Promise((resolve) => {
           try {
             const marketMaker = new MarketMaker(blockNum, txid, rawLog).translate();
-            //console.log(marketMaker);
-            //await DBHelper.removeOrdersByQuery(db.NewOrder, { orderId: cancelOrder.orderId });
+            console.log(marketMaker);
+            // await DBHelper.removeOrdersByQuery(db.NewOrder, { orderId: cancelOrder.orderId });
             resolve();
           } catch (err) {
             getLogger().error(`ERROR: ${err.message}`);

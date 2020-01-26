@@ -12,7 +12,6 @@ const { getContractMetadata } = require('../config');
 const apiRouter = new Router();
 
 
-
 function onRequestSuccess(res, result, next) {
   res.send(200, { result });
   next();
@@ -23,11 +22,10 @@ function onRequestError(res, err, next) {
   next();
 }
 
-/*Exchange*/
+/* Exchange */
 
 
-
-/*MetaData*/
+/* MetaData */
 apiRouter.get('/metadata', (req, res, next) => {
   getContractMetadata()
     .then((result) => {
@@ -55,7 +53,7 @@ apiRouter.get('/metadata/:option1/:option2?', (req, res, next) => {
   getContractMetadata()
     .then((result) => {
       if (result[req.params.option1][req.params.option2] === undefined) {
-        res.send(500, "MetaData Not Found");
+        res.send(500, 'MetaData Not Found');
       }
       onRequestSuccess(res, result[req.params.option1][req.params.option2], next);
     }, (err) => {
@@ -66,7 +64,7 @@ apiRouter.get('/metadata/:option1/:option2/:option3?', (req, res, next) => {
   getContractMetadata()
     .then((result) => {
       if (result[req.params.option1][req.params.option2][req.params.option3] === undefined) {
-        res.send(500, "MetaData Not Found");
+        res.send(500, 'MetaData Not Found');
       }
       onRequestSuccess(res, result[req.params.option1][req.params.option2][req.params.option3], next);
     }, (err) => {

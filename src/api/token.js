@@ -1,9 +1,6 @@
 const _ = require('lodash');
-
-const { getRunebaseRPCAddress } = require('../config');
 const Utils = require('../utils');
 const { getInstance } = require('../rclient');
-
 
 function getContract(tokenAddress, abi) {
   return getInstance().Contract(tokenAddress, abi);

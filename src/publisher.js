@@ -1,6 +1,6 @@
 const pubsub = require('./pubsub');
 
-module.exports.sendTradeInfo = function (tokenAddress, status, txid, from, to, soldTokens, boughtTokens, token, tokenName, orderType, type, price, orderId, time, amount, blockNum, decimals) {
+module.exports.sendTradeInfo = (tokenAddress, status, txid, from, to, soldTokens, boughtTokens, token, tokenName, orderType, type, price, orderId, time, amount, blockNum, decimals) => {
   pubsub.publish('onMyTradeInfo', {
     onMyTradeInfo: {
       tokenAddress,
@@ -22,9 +22,9 @@ module.exports.sendTradeInfo = function (tokenAddress, status, txid, from, to, s
       decimals,
     },
   });
-}
+};
 
-module.exports.sendFundRedeemInfo = function (txid, type, token, tokenName, status, owner, time, amount, blockNum) {
+module.exports.sendFundRedeemInfo = (txid, type, token, tokenName, status, owner, time, amount, blockNum) => {
   pubsub.publish('onFundRedeemInfo', {
     onFundRedeemInfo: {
       txid,
@@ -38,9 +38,9 @@ module.exports.sendFundRedeemInfo = function (txid, type, token, tokenName, stat
       blockNum,
     },
   });
-}
+};
 
-module.exports.sendSellHistoryInfo = function (tokenAddress, status, txid, from, to, soldTokens, boughtTokens, token, tokenName, orderType, type, price, orderId, time, amount, blockNum, decimals) {
+module.exports.sendSellHistoryInfo = (tokenAddress, status, txid, from, to, soldTokens, boughtTokens, token, tokenName, orderType, type, price, orderId, time, amount, blockNum, decimals) => {
   pubsub.publish('onSellHistoryInfo', {
     onSellHistoryInfo: {
       tokenAddress,
@@ -62,9 +62,9 @@ module.exports.sendSellHistoryInfo = function (tokenAddress, status, txid, from,
       decimals,
     },
   });
-}
+};
 
-module.exports.sendBuyHistoryInfo = function (tokenAddress, status, txid, from, to, soldTokens, boughtTokens, token, tokenName, orderType, type, price, orderId, time, amount, blockNum, decimals) {
+module.exports.sendBuyHistoryInfo = (tokenAddress, status, txid, from, to, soldTokens, boughtTokens, token, tokenName, orderType, type, price, orderId, time, amount, blockNum, decimals) => {
   pubsub.publish('onBuyHistoryInfo', {
     onBuyHistoryInfo: {
       tokenAddress,
@@ -86,9 +86,9 @@ module.exports.sendBuyHistoryInfo = function (tokenAddress, status, txid, from, 
       decimals,
     },
   });
-}
+};
 
-module.exports.sendBuyOrderInfo = function (txid, orderId, owner, token, tokenName, price, type, orderType, sellToken, buyToken, priceMul, priceDiv, time, amount, startAmount, blockNum, status, decimals) {
+module.exports.sendBuyOrderInfo = (txid, orderId, owner, token, tokenName, price, type, orderType, sellToken, buyToken, priceMul, priceDiv, time, amount, startAmount, blockNum, status, decimals) => {
   pubsub.publish('onBuyOrderInfo', {
     onBuyOrderInfo: {
       txid,
@@ -111,9 +111,9 @@ module.exports.sendBuyOrderInfo = function (txid, orderId, owner, token, tokenNa
       decimals,
     },
   });
-}
+};
 
-module.exports.sendSellOrderInfo = function (txid, orderId, owner, token, tokenName, price, type, orderType, sellToken, buyToken, priceMul, priceDiv, time, amount, startAmount, blockNum, status, decimals) {
+module.exports.sendSellOrderInfo = (txid, orderId, owner, token, tokenName, price, type, orderType, sellToken, buyToken, priceMul, priceDiv, time, amount, startAmount, blockNum, status, decimals) => {
   pubsub.publish('onSellOrderInfo', {
     onSellOrderInfo: {
       txid,
@@ -136,9 +136,9 @@ module.exports.sendSellOrderInfo = function (txid, orderId, owner, token, tokenN
       decimals,
     },
   });
-}
+};
 
-module.exports.sendActiveOrderInfo = function (txid, orderId, owner, token, tokenName, price, type, orderType, sellToken, buyToken, priceMul, priceDiv, time, amount, startAmount, blockNum, status, decimals) {
+module.exports.sendActiveOrderInfo = (txid, orderId, owner, token, tokenName, price, type, orderType, sellToken, buyToken, priceMul, priceDiv, time, amount, startAmount, blockNum, status, decimals) => {
   pubsub.publish('onActiveOrderInfo', {
     onActiveOrderInfo: {
       txid,
@@ -158,12 +158,13 @@ module.exports.sendActiveOrderInfo = function (txid, orderId, owner, token, toke
       startAmount,
       blockNum,
       status,
+      decimals,
     },
   });
-}
+};
 
 
-module.exports.sendFulfilledOrderInfo = function (txid, orderId, owner, token, tokenName, price, type, orderType, sellToken, buyToken, priceMul, priceDiv, time, amount, startAmount, blockNum, status, decimals) {
+module.exports.sendFulfilledOrderInfo = (txid, orderId, owner, token, tokenName, price, type, orderType, sellToken, buyToken, priceMul, priceDiv, time, amount, startAmount, blockNum, status, decimals) => {
   pubsub.publish('onFulfilledOrderInfo', {
     onFulfilledOrderInfo: {
       txid,
@@ -186,9 +187,9 @@ module.exports.sendFulfilledOrderInfo = function (txid, orderId, owner, token, t
       decimals,
     },
   });
-}
+};
 
-module.exports.sendCanceledOrderInfo = function (txid, orderId, owner, token, tokenName, price, type, orderType, sellToken, buyToken, priceMul, priceDiv, time, amount, startAmount, blockNum, status, decimals) {
+module.exports.sendCanceledOrderInfo = (txid, orderId, owner, token, tokenName, price, type, orderType, sellToken, buyToken, priceMul, priceDiv, time, amount, startAmount, blockNum, status, decimals) => {
   pubsub.publish('onCanceledOrderInfo', {
     onCanceledOrderInfo: {
       txid,
@@ -211,9 +212,9 @@ module.exports.sendCanceledOrderInfo = function (txid, orderId, owner, token, to
       decimals,
     },
   });
-}
+};
 
-module.exports.sendChartInfo = function (tokenAddress, timeTable, time, open, high, low, close, volume) {
+module.exports.sendChartInfo = (tokenAddress, timeTable, time, open, high, low, close, volume) => {
   pubsub.publish('onChartInfo', {
     onChartInfo: {
       tokenAddress,
@@ -226,4 +227,4 @@ module.exports.sendChartInfo = function (tokenAddress, timeTable, time, open, hi
       volume,
     },
   });
-}
+};

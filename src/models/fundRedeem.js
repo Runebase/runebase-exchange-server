@@ -3,8 +3,8 @@
 const _ = require('lodash');
 const { Decoder } = require('rweb3');
 const BigNumber = require('bignumber.js');
-const { isMainnet, getContractMetadata } = require('../config');
-const { orderState, SATOSHI_CONVERSION } = require('../constants');
+const { isMainnet } = require('../config');
+const { SATOSHI_CONVERSION } = require('../constants');
 
 class NewOrder {
   constructor(blockNum, txid, rawLog, tokens, baseCurrency) {
@@ -23,28 +23,28 @@ class NewOrder {
   decode() {
     this.tokenAddress = this.rawLog._token.substring(2);
     this.owner = this.rawLog._owner.substring(2);
-    this.amount =  new BigNumber(this.rawLog._amount).dividedBy(SATOSHI_CONVERSION).toString(10);
+    this.amount = new BigNumber(this.rawLog._amount).dividedBy(SATOSHI_CONVERSION).toString(10);
     this.time = this.rawLog._time.toString(10);
-    if (this.tokenAddress === this.baseCurrency['Address']) {
+    if (this.tokenAddress === this.baseCurrency.Address) {
       console.log('DEPOSIT/WITHDRAW RUNES');
-      this.token = this.baseCurrency['Pair'];
-      this.tokenName = this.baseCurrency['Name'];
+      this.token = this.baseCurrency.Pair;
+      this.tokenName = this.baseCurrency.Name;
     }
-    for (let key in this.tokens){
-      if (this.tokens[key]['address'] === this.tokenAddress) {
-        console.log('DEPOSIT/WITHDRAW ' + this.tokens[key]['market']);
-        this.token = this.tokens[key]['market'];
-        this.tokenName = this.tokens[key]['tokenName'];
+    for (const key in this.tokens) {
+      if (this.tokens[key].address === this.tokenAddress) {
+        console.log(`DEPOSIT/WITHDRAW ${this.tokens[key].market}`);
+        this.token = this.tokens[key].market;
+        this.tokenName = this.tokens[key].tokenName;
       }
     }
-    if (this.rawLog._eventName == 'Deposit') {
+    if (this.rawLog._eventName === 'Deposit') {
       this.type = 'DEPOSITEXCHANGE';
     }
-    if (this.rawLog._eventName == 'Withdrawal') {
+    if (this.rawLog._eventName === 'Withdrawal') {
       this.type = 'WITHDRAWEXCHANGE';
     }
-
   }
+
   translate() {
     return {
       txid: this.txid,
@@ -62,4 +62,3 @@ class NewOrder {
 }
 
 module.exports = NewOrder;
-

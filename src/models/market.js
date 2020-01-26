@@ -12,8 +12,8 @@ class Market {
     this.address = this.marketData._tokenAddress.toString(10).substring(2);
     this.abi = this.marketData._tokenVersion.toString(10);
     this.image = this.marketData._tokenLogo.toString(10);
-    this.decimals = parseInt(this.marketData._tokenDecimals.toString(10));
-    this.startTime = parseInt(this.marketData._time.toString(10));
+    this.decimals = parseInt(this.marketData._tokenDecimals.toString(10), 10);
+    this.startTime = parseInt(this.marketData._time.toString(10), 10);
   }
 
   translate() {

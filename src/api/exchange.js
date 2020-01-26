@@ -1,10 +1,5 @@
 const _ = require('lodash');
-const BigNumber = require('bignumber.js');
 const { getInstance } = require('../rclient');
-
-const { getRunebaseRPCAddress } = require('../config');
-const { SATOSHI_CONVERSION } = require('../constants');
-const Utils = require('../utils');
 
 function getContract(exchangeAddress, abi) {
   return getInstance().Contract(exchangeAddress, abi);
@@ -36,18 +31,17 @@ const Exchange = {
       methodArgs: [token, user],
       senderAddress,
     });
-    //res.balance = Utils.hexToDecimalString(res.executionResult.formattedOutput[0]);
-    //res[0] = Utils.hexToDecimalString(res[0]);
-    //return res;
+    // res.balance = Utils.hexToDecimalString(res.executionResult.formattedOutput[0]);
+    // res[0] = Utils.hexToDecimalString(res[0]);
+    // return res;
   },
 
   async depositExchangeBaseCurrency(args) {
-
     const {
       exchangeAddress, // address
       amount,
       senderAddress,
-      abi
+      abi,
     } = args;
     if (_.isUndefined(senderAddress)) {
       throw new TypeError('senderAddress needs to be defined');
@@ -120,6 +114,9 @@ const Exchange = {
     if (_.isUndefined(senderAddress)) {
       throw new TypeError('senderAddress needs to be defined');
     }
+    if (_.isUndefined(token)) {
+      throw new TypeError('token needs to be defined');
+    }
     if (_.isUndefined(exchangeAddress)) {
       throw new TypeError('exchangeAddress needs to be defined');
     }
@@ -143,15 +140,15 @@ const Exchange = {
     }
 
     let res;
-    if (orderType == 'buy') {
+    if (orderType === 'buy') {
       res = await getContract(exchangeAddress, abi).send('createOrder', {
-        methodArgs: ["0000000000000000000000000000000000000000", tokenAddress, amount, priceFractN, priceFractD],
+        methodArgs: ['0000000000000000000000000000000000000000', tokenAddress, amount, priceFractN, priceFractD],
         senderAddress,
       });
     }
-    if (orderType == 'sell') {
+    if (orderType === 'sell') {
       res = await getContract(exchangeAddress, abi).send('createOrder', {
-        methodArgs: [tokenAddress, "0000000000000000000000000000000000000000", amount, priceFractN, priceFractD],
+        methodArgs: [tokenAddress, '0000000000000000000000000000000000000000', amount, priceFractN, priceFractD],
         senderAddress,
       });
     }
@@ -177,7 +174,7 @@ const Exchange = {
       throw new TypeError('abi needs to be defined');
     }
 
-    res = await getContract(exchangeAddress, abi).send('cancelOrder', {
+    const res = await getContract(exchangeAddress, abi).send('cancelOrder', {
       methodArgs: [orderId],
       senderAddress,
     });
@@ -208,7 +205,7 @@ const Exchange = {
     if (_.isUndefined(abi)) {
       throw new TypeError('abi needs to be defined');
     }
-    res = await getContract(exchangeAddress, abi).send('executeOrder', {
+    const res = await getContract(exchangeAddress, abi).send('executeOrder', {
       methodArgs: [orderId, exchangeAmount],
       senderAddress,
     });
