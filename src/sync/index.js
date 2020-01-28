@@ -526,7 +526,6 @@ async function getAddressBalances() {
       _.each(grouping, (addressArrItem) => {
         addressObjs.push({
           address: addressArrItem[0],
-          runebase: new BigNumber(addressArrItem[1]).multipliedBy(SATOSHI_CONVERSION).toString(10),
           Wallet: {
             RUNES: new BigNumber(addressArrItem[1]).toString(10),
           },
@@ -542,14 +541,14 @@ async function getAddressBalances() {
   const addressBatches = _.chunk(addressList, RPC_BATCH_SIZE);
   await new Promise(async (resolve) => {
     sequentialLoop(addressBatches.length, async (loop) => {
-      const BalancePromises = [];
-      const ExchangeBasePromises = [];
-      const ExchangeTokenPromises = [];
+      const walletBalancePromises = [];
+      const exchangeBasePromises = [];
+      const exchangeBalancePromises = [];
       const StringPromises = [];
       const markets = await db.Markets.find({});
 
       _.map(addressBatches[loop.iteration()], async (address) => {
-        const ExchangeBasePromise = new Promise(async (ExchangeBaseResolve) => {
+        const exchangeBasePromise = new Promise(async (ExchangeBaseResolve) => {
           try {
             let Balance = new BigNumber(0);
             const hex = await getInstance().getHexAddress(address);
@@ -562,91 +561,72 @@ async function getAddressBalances() {
             });
             Balance = await Utils.hexToDecimalString(resp.executionResult.formattedOutput[0]);
             const found = _.find(addressObjs, { address });
-            found.Exchange[MetaData.BaseCurrency.Pair] = await new BigNumber(Balance).dividedBy(SATOSHI_CONVERSION).toString(10);
+            found.Exchange[MetaData.BaseCurrency.Pair] = new BigNumber(Balance).dividedBy(SATOSHI_CONVERSION).toString(10);
             ExchangeBaseResolve();
           } catch (err) {
             getLogger().error(`BalanceOf ${address}: ${err.message}`);
           }
         });
-        ExchangeBasePromises.push(ExchangeBasePromise);
-      });
-      await Promise.all(ExchangeBasePromises);
 
-      _.map(addressBatches[loop.iteration()], async (address) => {
-        const ExchangeTokenPromise = new Promise(async (ExchangeTokenResolver) => {
-          let ExchangeTokenCounter = 0;
-          for (const ExchangeToken of markets) {
-            try {
-              // console.log(ExchangeToken);
-              let Balance = new BigNumber(0);
-              const hex = await getInstance().getHexAddress(address);
-              const resp = await exchange.balanceOf({
-                token: ExchangeToken.address,
-                user: hex,
-                senderAddress: address,
-                exchangeAddress: MetaData.Exchange.Address,
-                abi: MetaData.Exchange.Abi,
-              });
-              Balance = Utils.hexToDecimalString(resp.executionResult.formattedOutput[0]);
-              const found = _.find(addressObjs, { address });
-              found.Exchange[ExchangeToken.market] = await new BigNumber(Balance).dividedBy(10 ** ExchangeToken.decimals).toString(10);
-              ExchangeTokenCounter++;
-              if (ExchangeTokenCounter === Object.keys(markets).length) {
-                getLogger().debug('Exchange Token Parent Done');
-                ExchangeTokenResolver();
-              }
-            } catch (err) {
-              getLogger().error(`BalanceOf ${address}: ${err.message}`);
-            }
+        const exchangeBalancePromise = markets.reduce(async (prev, ExchangeToken) => {
+          await prev;
+          try {
+            let Balance = new BigNumber(0);
+            const hex = await getInstance().getHexAddress(address);
+            const resp = await exchange.balanceOf({
+              token: ExchangeToken.address,
+              user: hex,
+              senderAddress: address,
+              exchangeAddress: MetaData.Exchange.Address,
+              abi: MetaData.Exchange.Abi,
+            });
+            Balance = Utils.hexToDecimalString(resp.executionResult.formattedOutput[0]);
+            const found = _.find(addressObjs, { address });
+            found.Exchange[ExchangeToken.market] = new BigNumber(Balance).dividedBy(10 ** ExchangeToken.decimals).toString(10);
+          } catch (err) {
+            getLogger().error(`BalanceOf ${address}: ${err.message}`);
           }
-        });
-        ExchangeTokenPromises.push(ExchangeTokenPromise);
-      });
-      await Promise.all(ExchangeTokenPromises);
+        }, Promise.resolve());
 
-      _.map(addressBatches[loop.iteration()], async (address) => {
-        const WalletTokenPromise = new Promise(async (WalletTokenResolve) => {
-          let WalletTokenCounter = 0;
-          for (const WalletToken of markets) {
-            try {
-              const myAbi = MetaData.TokenAbi[WalletToken.abi];
-              let Balance = new BigNumber(0);
-              const resp = await Token.balanceOf({
-                owner: address,
-                senderAddress: address,
-                token: WalletToken.market,
-                tokenAddress: WalletToken.address,
-                abi: myAbi,
-              });
-              Balance = resp.balance;
-              const found = _.find(addressObjs, { address });
-              found.Wallet[WalletToken.market] = new BigNumber(Balance).dividedBy(10 ** WalletToken.decimals).toString(10);
-              WalletTokenCounter++;
-              if (WalletTokenCounter === Object.keys(markets).length) {
-                getLogger().debug('Wallet Token Parent Done');
-                WalletTokenResolve();
-              }
-            } catch (err) {
-              getLogger().error(`BalanceOf ${address}: ${err.message}`);
-            }
+        const walletBalancePromise = markets.reduce(async (prev, WalletToken) => {
+          await prev;
+          try {
+            const myAbi = MetaData.TokenAbi[WalletToken.abi];
+            let Balance = new BigNumber(0);
+            const resp = await Token.balanceOf({
+              owner: address,
+              senderAddress: address,
+              token: WalletToken.market,
+              tokenAddress: WalletToken.address,
+              abi: myAbi,
+            });
+            Balance = resp.balance;
+            const found = _.find(addressObjs, { address });
+            found.Wallet[WalletToken.market] = new BigNumber(Balance).dividedBy(10 ** WalletToken.decimals).toString(10);
+          } catch (err) {
+            getLogger().error(`BalanceOf ${address}: ${err.message}`);
           }
-        });
+        }, Promise.resolve());
 
-        BalancePromises.push(WalletTokenPromise);
+        exchangeBasePromises.push(exchangeBasePromise);
+        exchangeBalancePromises.push(exchangeBalancePromise);
+        walletBalancePromises.push(walletBalancePromise);
       });
-      await Promise.all(BalancePromises);
+      await Promise.all(exchangeBasePromises);
+      await Promise.all(exchangeBalancePromises);
+      await Promise.all(walletBalancePromises);
+
 
       _.map(addressBatches[loop.iteration()], async (address) => {
         const StringPromise = new Promise(async (StringResolve) => {
-          async.forEach(markets, async (ExchangeToken, callback) => {
-            try {
-              const found = await _.find(addressObjs, { address });
-              found.balance = JSON.stringify(found);
-              StringResolve();
-            } catch (err) {
-              getLogger().error(`BalanceOf ${address}: ${err.message}`);
-            }
-          });
+          try {
+            const found = await _.find(addressObjs, { address });
+            console.log(found);
+            found.balance = JSON.stringify(found);
+            StringResolve();
+          } catch (err) {
+            getLogger().error(`BalanceOf ${address}: ${err.message}`);
+          }
         });
 
         StringPromises.push(StringPromise);
@@ -663,8 +643,6 @@ async function getAddressBalances() {
   // Add default address with zero balances if no address was used before ¯\_(ツ)_/¯
   if (_.isEmpty(addressObjs)) {
     let address;
-    let addressWithLabel;
-    const myEmptyObject = {};
     const emptyObject = {};
     try {
       try {
