@@ -37,6 +37,7 @@
     "moment": "^2.22.2",
     "nedb-promise": "^2.0.1",
     "node-fetch": "^2.2.0",
+    "p-iteration": "^1.1.8",
     "portscanner": "^2.1.1",
     "restify": "^6.4.0",
     "restify-cors-middleware": "^1.1.0",

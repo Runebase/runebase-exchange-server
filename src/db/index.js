@@ -5,7 +5,6 @@ const fs = require('fs-extra');
 const Utils = require('../utils');
 const { getLogger } = require('../utils/logger');
 const migrateTxDB = require('./migrations/migrateTx');
-const Market = require('../models/market');
 const BaseCurrency = require('../models/baseCurrency');
 const { getContractMetadata } = require('../config');
 

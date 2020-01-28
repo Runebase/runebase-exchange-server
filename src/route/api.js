@@ -1,5 +1,4 @@
 const { Router } = require('restify-router');
-const restify = require('restify');
 const Blockchain = require('../api/blockchain');
 const Wallet = require('../api/wallet');
 const Token = require('../api/token');

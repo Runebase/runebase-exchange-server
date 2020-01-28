@@ -30,13 +30,13 @@ class NewOrder {
       this.token = this.baseCurrency.Pair;
       this.tokenName = this.baseCurrency.Name;
     }
-    for (const key in this.tokens) {
+    Object.keys(this.tokens).forEach((key) => {
       if (this.tokens[key].address === this.tokenAddress) {
         console.log(`DEPOSIT/WITHDRAW ${this.tokens[key].market}`);
         this.token = this.tokens[key].market;
         this.tokenName = this.tokens[key].tokenName;
       }
-    }
+    });
     if (this.rawLog._eventName === 'Deposit') {
       this.type = 'DEPOSITEXCHANGE';
     }

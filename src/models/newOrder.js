@@ -31,13 +31,13 @@ class NewOrder {
     if (this.rawLog._buyToken.toString(10) === '0x0000000000000000000000000000000000000000') {
       this.tokenAddress = stripHexPrefix(this.rawLog._sellToken.toString(10));
     }
-    for (const key in this.tokens) {
+    Object.keys(this.tokens).forEach((key) => {
       if (this.tokens[key].address === this.sellToken || this.tokens[key].address === this.buyToken) {
         this.decimals = this.tokens[key].decimals;
         this.token = this.tokens[key].market;
         this.tokenName = this.tokens[key].tokenName;
       }
-    }
+    });
     if (this.sellToken === this.baseCurrencyAddress) {
       this.type = 'BUYORDER';
       this.orderType = 'BUYORDER';
