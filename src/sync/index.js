@@ -1,12 +1,9 @@
 /* eslint no-underscore-dangle: [2, { "allow": ["_eventName", "_address", "_time"] }] */
-
 const fs = require('fs-extra');
 const _ = require('lodash');
 const moment = require('moment');
 const BigNumber = require('bignumber.js');
 const { forEach } = require('p-iteration');
-const async = require('async');
-const Web3 = require('web3');
 const abi = require('ethjs-abi');
 const pubsub = require('../pubsub');
 const {
@@ -44,9 +41,10 @@ const { getInstance } = require('../rclient');
 const { orderState } = require('../constants');
 // const { txState } = require('../constants');
 
-const web3 = new Web3();
 
 // Example to hash event functions
+// const Web3 = require('web3');
+// const web3 = new Web3();
 // console.log(Web3.utils.sha3('ListingCreated(address,string,string,string,uint8,uint8,uint256)'))
 
 const RPC_BATCH_SIZE = 5;
@@ -80,16 +78,7 @@ const insertEmptyCandles = async (timeNow, t, address) => {
       volume: 0,
     };
     await db.Charts.insert(changeOHLC);
-    sendChartInfo(
-      changeOHLC.tokenAddress,
-      changeOHLC.timeTable,
-      changeOHLC.time,
-      changeOHLC.open,
-      changeOHLC.high,
-      changeOHLC.low,
-      changeOHLC.close,
-      changeOHLC.volume,
-    );
+    sendChartInfo(changeOHLC);
     await insertEmptyCandles(timeNow, t, address);
   }
 };
@@ -244,7 +233,6 @@ async function sync() {
 }
 
 async function syncTokenListingCreated(startBlock, endBlock, removeHexPrefix) {
-  const blockchainDataPath = Utils.getDataDir();
   let result;
   const ListingCreatedPromises = [];
   try {
@@ -274,10 +262,10 @@ async function syncTokenListingCreated(startBlock, endBlock, removeHexPrefix) {
             const marketAddress = market.address;
 
             if (await DBHelper.getCount(db.Markets, { address: marketAddress }) > 0) {
-              const getMarket = await DBHelper.findOne(db.Markets, { address: marketAddress });
+              // const getMarket = await DBHelper.findOne(db.Markets, { address: marketAddress });
               await DBHelper.updateMarketByQuery(db.Markets, { address: marketAddress }, market);
             } else {
-              for (const t of timeTable) {
+              await forEach(timeTable, async (t) => {
                 const initChart = {
                   tokenAddress: marketAddress,
                   timeTable: t,
@@ -289,7 +277,20 @@ async function syncTokenListingCreated(startBlock, endBlock, removeHexPrefix) {
                   volume: 0,
                 };
                 await db.Charts.insert(initChart);
-              }
+              });
+              // for (const t of timeTable) {
+              //  const initChart = {
+              //    tokenAddress: marketAddress,
+              //    timeTable: t,
+              //    time: market.startTime,
+              //    open: 0,
+              //    high: 0,
+              //    low: 0,
+              //    close: 0,
+              //    volume: 0,
+              //  };
+              //  await db.Charts.insert(initChart);
+              // }
               await db.Markets.insert(market);
             }
             await DBHelper.changeMarketByQuery(db.NewOrder, { sellToken: marketAddress }, market);
@@ -328,8 +329,8 @@ async function syncTokenListingUpdated(startBlock, endBlock, removeHexPrefix) {
   getLogger().debug(`${startBlock} - ${endBlock}: Retrieved ${result.length} entries from ListingUpdated`);
 
   _.forEach(result, (event, index) => {
-    const blockNum = event.blockNumber;
-    const txid = event.transactionHash;
+    // const blockNum = event.blockNumber;
+    // const txid = event.transactionHash;
     _.forEachRight(event.log, (rawLog) => {
       const topics = rawLog.topics.map((i) => `0x${i}`);
       const data = `0x${rawLog.data}`;
@@ -617,6 +618,8 @@ async function getAddressBalances() {
       await Promise.all(walletBalancePromises);
 
 
+      // Create String of the balances so we can send the data over GraphQL
+      // without knowing the Graphql schema for RRC223 tokens in advance.
       _.map(addressBatches[loop.iteration()], async (address) => {
         const StringPromise = new Promise(async (StringResolve) => {
           try {
@@ -637,8 +640,6 @@ async function getAddressBalances() {
       resolve();
     });
   });
-
-  // /////////////////////////////////////////////////////////
 
   // Add default address with zero balances if no address was used before ¯\_(ツ)_/¯
   if (_.isEmpty(addressObjs)) {
@@ -719,72 +720,21 @@ async function syncNewOrder(startBlock, endBlock, removeHexPrefix) {
       if (OutputBytecode._eventName === 'NewOrder' && parseInt(OutputBytecode._time.toString(10), 10) !== 0) {
         const insertNewOrderDB = new Promise(async (resolve) => {
           try {
-            const newOrder = await new NewOrder(blockNum, txid, OutputBytecode, markets, MetaData.BaseCurrency.Address).translate();
+            const newOrder = new NewOrder(
+              blockNum,
+              txid,
+              OutputBytecode,
+              markets,
+              MetaData.BaseCurrency.Address,
+            ).translate();
             if (await DBHelper.getCount(db.NewOrder, { txid }) > 0) {
               DBHelper.updateOrderByQuery(db.NewOrder, { txid }, newOrder);
             } else {
               DBHelper.insertTopic(db.NewOrder, newOrder);
             }
-            sendSellOrderInfo(
-              newOrder.txid,
-              newOrder.orderId,
-              newOrder.owner,
-              newOrder.token,
-              newOrder.tokenName,
-              newOrder.price,
-              newOrder.type,
-              newOrder.orderType,
-              newOrder.sellToken,
-              newOrder.buyToken,
-              newOrder.priceMul,
-              newOrder.priceDiv,
-              newOrder.time,
-              newOrder.amount,
-              newOrder.startAmount,
-              newOrder.blockNum,
-              newOrder.status,
-              newOrder.decimals,
-            );
-            sendBuyOrderInfo(
-              newOrder.txid,
-              newOrder.orderId,
-              newOrder.owner,
-              newOrder.token,
-              newOrder.tokenName,
-              newOrder.price,
-              newOrder.type,
-              newOrder.orderType,
-              newOrder.sellToken,
-              newOrder.buyToken,
-              newOrder.priceMul,
-              newOrder.priceDiv,
-              newOrder.time,
-              newOrder.amount,
-              newOrder.startAmount,
-              newOrder.blockNum,
-              newOrder.status,
-              newOrder.decimals,
-            );
-            sendActiveOrderInfo(
-              newOrder.txid,
-              newOrder.orderId,
-              newOrder.owner,
-              newOrder.token,
-              newOrder.tokenName,
-              newOrder.price,
-              newOrder.type,
-              newOrder.orderType,
-              newOrder.sellToken,
-              newOrder.buyToken,
-              newOrder.priceMul,
-              newOrder.priceDiv,
-              newOrder.time,
-              newOrder.amount,
-              newOrder.startAmount,
-              newOrder.blockNum,
-              newOrder.status,
-              newOrder.decimals,
-            );
+            sendSellOrderInfo(newOrder);
+            sendBuyOrderInfo(newOrder);
+            sendActiveOrderInfo(newOrder);
 
             resolve();
           } catch (err) {
@@ -830,26 +780,7 @@ async function syncOrderCancelled(startBlock, endBlock, removeHexPrefix) {
             const cancelOrder = new CancelOrder(blockNum, txid, OutputBytecode).translate();
             const orderId = cancelOrder.orderId;
             await DBHelper.updateCanceledOrdersByQuery(db.NewOrder, { orderId }, cancelOrder);
-            sendCanceledOrderInfo(
-              cancelOrder.txid,
-              cancelOrder.orderId,
-              cancelOrder.owner,
-              cancelOrder.token,
-              cancelOrder.tokenName,
-              cancelOrder.price,
-              cancelOrder.type,
-              cancelOrder.orderType,
-              cancelOrder.sellToken,
-              cancelOrder.buyToken,
-              cancelOrder.priceMul,
-              cancelOrder.priceDiv,
-              cancelOrder.time,
-              cancelOrder.amount,
-              cancelOrder.startAmount,
-              cancelOrder.blockNum,
-              cancelOrder.status,
-              cancelOrder.decimals,
-            );
+            sendCanceledOrderInfo(cancelOrder);
             resolve();
           } catch (err) {
             getLogger().error(`ERROR: ${err.message}`);
@@ -898,26 +829,7 @@ async function syncOrderFulfilled(startBlock, endBlock, removeHexPrefix) {
               await DBHelper.updateFulfilledOrdersByQuery(db.NewOrder, { orderId }, fulfillOrder);
               // await DBHelper.removeOrdersByQuery(db.NewOrder, { orderId: fulfillOrder.orderId });
               const getOrder = await DBHelper.findOne(db.NewOrder, { orderId });
-              sendFulfilledOrderInfo(
-                getOrder.txid,
-                getOrder.orderId,
-                getOrder.owner,
-                getOrder.token,
-                getOrder.tokenName,
-                getOrder.price,
-                getOrder.type,
-                getOrder.orderType,
-                getOrder.sellToken,
-                getOrder.buyToken,
-                getOrder.priceMul,
-                getOrder.priceDiv,
-                getOrder.time,
-                getOrder.amount,
-                getOrder.startAmount,
-                getOrder.blockNum,
-                getOrder.status,
-                getOrder.decimals,
-              );
+              sendFulfilledOrderInfo(getOrder);
               resolve();
             } catch (err) {
               getLogger().error(`ERROR: ${err.message}`);
@@ -987,22 +899,14 @@ async function addTrade(rawLog, blockNum, txid) {
               changeOHLC.low = ohlc[0].low;
             }
             await DBHelper.updateObjectByQuery(db.Charts, { time: ohlc[0].time, timeTable: t }, changeOHLC);
-            sendChartInfo(
-              changeOHLC.tokenAddress,
-              changeOHLC.timeTable,
-              changeOHLC.time,
-              changeOHLC.open,
-              changeOHLC.high,
-              changeOHLC.low,
-              changeOHLC.close,
-              changeOHLC.volume,
-            );
+            sendChartInfo(changeOHLC);
           });
         } else {
           changeOHLC = {
             tokenAddress: trade.tokenAddress,
             timeTable: t,
             time: ohlc[0].time,
+            open: ohlc[0].open,
             close: trade.price,
             volume: ohlc[0].volume + parseInt(trade.amount, 10),
           };
@@ -1017,78 +921,15 @@ async function addTrade(rawLog, blockNum, txid) {
             changeOHLC.low = ohlc[0].low;
           }
           await DBHelper.updateObjectByQuery(db.Charts, { time: ohlc[0].time, timeTable: t }, changeOHLC);
-          sendChartInfo(
-            changeOHLC.tokenAddress,
-            changeOHLC.timeTable,
-            changeOHLC.time,
-            ohlc[0].open,
-            changeOHLC.high,
-            changeOHLC.low,
-            changeOHLC.close,
-            changeOHLC.volume,
-          );
+          sendChartInfo(changeOHLC);
         }
       }
     });
 
     // GraphQl push Subs
-    sendTradeInfo(
-      trade.tokenAddress,
-      trade.status,
-      trade.txid,
-      trade.from,
-      trade.to,
-      trade.soldTokens,
-      trade.boughtTokens,
-      trade.token,
-      trade.tokenName,
-      trade.orderType,
-      trade.type,
-      trade.price,
-      trade.orderId,
-      trade.time,
-      trade.amount,
-      trade.blockNum,
-      trade.decimals,
-    );
-    sendSellHistoryInfo(
-      trade.tokenAddress,
-      trade.status,
-      trade.txid,
-      trade.from,
-      trade.to,
-      trade.soldTokens,
-      trade.boughtTokens,
-      trade.token,
-      trade.tokenName,
-      trade.orderType,
-      trade.type,
-      trade.price,
-      trade.orderId,
-      trade.time,
-      trade.amount,
-      trade.blockNum,
-      trade.decimals,
-    );
-    sendBuyHistoryInfo(
-      trade.tokenAddress,
-      trade.status,
-      trade.txid,
-      trade.from,
-      trade.to,
-      trade.soldTokens,
-      trade.boughtTokens,
-      trade.token,
-      trade.tokenName,
-      trade.orderType,
-      trade.type,
-      trade.price,
-      trade.orderId,
-      trade.time,
-      trade.amount,
-      trade.blockNum,
-      trade.decimals,
-    );
+    sendTradeInfo(trade);
+    sendSellHistoryInfo(trade);
+    sendBuyHistoryInfo(trade);
 
     getLogger().debug('Trade Inserted');
     return trade;
@@ -1126,10 +967,10 @@ async function syncTrade(startBlock, endBlock, removeHexPrefix) {
 
   getLogger().debug(`${startBlock} - ${endBlock}: Retrieved ${result.length} entries from syncTrade`);
 
-  for (const event of result) {
+  await forEach(result, async (event) => {
     const blockNum = event.blockNumber;
     const txid = event.transactionHash;
-    for (const rawLog of event.log) {
+    await forEach(event.log, async (rawLog) => {
       topics = rawLog.topics.map((i) => `0x${i}`);
       data = `0x${rawLog.data}`;
       topics = await topicFiller(topics);
@@ -1138,8 +979,22 @@ async function syncTrade(startBlock, endBlock, removeHexPrefix) {
       if (OutputBytecode._eventName === 'Trade' && parseInt(OutputBytecode._time.toString(10), 10) !== 0) {
         await addTrade(OutputBytecode, blockNum, txid);
       }
-    }
-  }
+    });
+  });
+
+  // for (const event of result) {
+  //  const blockNum = event.blockNumber;
+  //  const txid = event.transactionHash;
+  //  for (const rawLog of event.log) {
+  //    topics = rawLog.topics.map((i) => `0x${i}`);
+  //    data = `0x${rawLog.data}`;
+  //    topics = await topicFiller(topics);
+  //    const OutputBytecode = await abi.decodeEvent(MetaData.Exchange.Abi[20], data, topics);
+  //   if (OutputBytecode._eventName === 'Trade' && parseInt(OutputBytecode._time.toString(10), 10) !== 0) {
+  //      await addTrade(OutputBytecode, blockNum, txid);
+  //    }
+  //  }
+  // }
 }
 
 function getPercentageChange(oldNumber, newNumber) {
@@ -1282,17 +1137,7 @@ async function syncFundRedeem(startBlock, endBlock, removeHexPrefix) {
             } else {
               await DBHelper.insertTopic(db.FundRedeem, fund);
             }
-            sendFundRedeemInfo(
-              fund.txid,
-              fund.type,
-              fund.token,
-              fund.tokenName,
-              fund.status,
-              fund.owner,
-              fund.time,
-              fund.amount,
-              fund.blockNum,
-            );
+            sendFundRedeemInfo(fund);
             resolve();
           } catch (err) {
             getLogger().error(`ERROR: ${err.message}`);
@@ -1322,17 +1167,7 @@ async function syncFundRedeem(startBlock, endBlock, removeHexPrefix) {
             } else {
               await DBHelper.insertTopic(db.FundRedeem, redeem);
             }
-            sendFundRedeemInfo(
-              redeem.txid,
-              redeem.type,
-              redeem.token,
-              redeem.tokenName,
-              redeem.status,
-              redeem.owner,
-              redeem.time,
-              redeem.amount,
-              redeem.blockNum,
-            );
+            sendFundRedeemInfo(redeem);
             resolve();
           } catch (err) {
             getLogger().error(`ERROR: ${err.message}`);

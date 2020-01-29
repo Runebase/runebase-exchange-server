@@ -805,17 +805,7 @@ module.exports = {
         tokenName: token,
         amount: pendingAmount,
       };
-      sendFundRedeemInfo(
-        deposit.txid,
-        deposit.type,
-        deposit.token,
-        deposit.tokenName,
-        deposit.status,
-        deposit.owner,
-        deposit.time,
-        deposit.amount,
-        deposit.blockNum,
-      );
+      sendFundRedeemInfo(deposit);
       await DBHelper.insertTopic(db.FundRedeem, deposit);
       return deposit;
     },
@@ -889,17 +879,7 @@ module.exports = {
         amount: new BigNumber(amount).dividedBy(SATOSHI_CONVERSION).toString(),
       };
       getLogger().debug(JSON.stringify(withdrawal));
-      sendFundRedeemInfo(
-        withdrawal.txid,
-        withdrawal.type,
-        withdrawal.token,
-        withdrawal.tokenName,
-        withdrawal.status,
-        withdrawal.owner,
-        withdrawal.time,
-        withdrawal.amount,
-        withdrawal.blockNum,
-      );
+      sendFundRedeemInfo(withdrawal);
       await DBHelper.insertTopic(db.FundRedeem, withdrawal);
       return withdrawal;
     },
@@ -996,26 +976,7 @@ module.exports = {
         decimals,
       };
       await DBHelper.insertTopic(db.NewOrder, order);
-      sendActiveOrderInfo(
-        order.txid,
-        order.orderId,
-        order.owner,
-        order.token,
-        order.tokenName,
-        order.price,
-        order.type,
-        order.orderType,
-        order.sellToken,
-        order.buyToken,
-        order.priceMul,
-        order.priceDiv,
-        order.time,
-        order.amount,
-        order.startAmount,
-        order.blockNum,
-        order.status,
-        order.decimals,
-      );
+      sendActiveOrderInfo(order);
       return order;
     },
 
@@ -1060,26 +1021,7 @@ module.exports = {
       };
       await DBHelper.cancelOrderByQuery(db.NewOrder, { orderId }, order);
       const getOrder = await DBHelper.findOne(db.NewOrder, { orderId });
-      sendActiveOrderInfo(
-        getOrder.txid,
-        getOrder.orderId,
-        getOrder.owner,
-        getOrder.token,
-        getOrder.tokenName,
-        getOrder.price,
-        getOrder.type,
-        getOrder.orderType,
-        getOrder.sellToken,
-        getOrder.buyToken,
-        getOrder.priceMul,
-        getOrder.priceDiv,
-        getOrder.time,
-        getOrder.amount,
-        getOrder.startAmount,
-        getOrder.blockNum,
-        getOrder.status,
-        getOrder.decimals,
-      );
+      sendActiveOrderInfo(getOrder);
       return order;
     },
 
@@ -1146,63 +1088,9 @@ module.exports = {
         blockNum: 0,
         decimals: getOrder.decimals,
       };
-      sendTradeInfo(
-        trade.tokenAddress,
-        trade.status,
-        trade.txid,
-        trade.from,
-        trade.to,
-        trade.soldTokens,
-        trade.boughtTokens,
-        trade.token,
-        trade.tokenName,
-        trade.orderType,
-        trade.type,
-        trade.price,
-        trade.orderId,
-        trade.time,
-        trade.amount,
-        trade.blockNum,
-        trade.decimals,
-      );
-      sendSellHistoryInfo(
-        trade.tokenAddress,
-        trade.status,
-        trade.txid,
-        trade.from,
-        trade.to,
-        trade.soldTokens,
-        trade.boughtTokens,
-        trade.token,
-        trade.tokenName,
-        trade.orderType,
-        trade.type,
-        trade.price,
-        trade.orderId,
-        trade.time,
-        trade.amount,
-        trade.blockNum,
-        trade.decimals,
-      );
-      sendBuyHistoryInfo(
-        trade.tokenAddress,
-        trade.status,
-        trade.txid,
-        trade.from,
-        trade.to,
-        trade.soldTokens,
-        trade.boughtTokens,
-        trade.token,
-        trade.tokenName,
-        trade.orderType,
-        trade.type,
-        trade.price,
-        trade.orderId,
-        trade.time,
-        trade.amount,
-        trade.blockNum,
-        trade.decimals,
-      );
+      sendTradeInfo(trade);
+      sendSellHistoryInfo(trade);
+      sendBuyHistoryInfo(trade);
       await DBHelper.insertTopic(db.Trade, trade);
       return trade;
     },

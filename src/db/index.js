@@ -89,15 +89,9 @@ function deleteRunebaseExchangeData() {
   const blockchainDataPath = Utils.getDataDir();
 
   try {
-    fs.removeSync(`${blockchainDataPath}/PRED.tsv`);
+    fs.removeSync(`${blockchainDataPath}/charts.db`);
   } catch (err) {
-    logger.error(`Delete PRED.tsv error: ${err.message}`);
-  }
-
-  try {
-    fs.removeSync(`${blockchainDataPath}/FUN.tsv`);
-  } catch (err) {
-    logger.error(`Delete FUN.tsv error: ${err.message}`);
+    logger.error(`Delete charts.db error: ${err.message}`);
   }
 
   try {
@@ -455,13 +449,19 @@ class DBHelper {
     let fieldsObj;
     if (!_.isEmpty(fields)) {
       fieldsObj = {};
-      _.each(fields, (field) => fieldsObj[field] = 1);
+      _.each(fields, (field) => {
+        fieldsObj[field] = 1;
+      });
     }
 
     const found = await database.findOne(query, fieldsObj);
     if (!found) {
       const { filename } = database.nedb;
-      throw Error(`Could not findOne ${filename.substr(filename.lastIndexOf('/') + 1)} by query ${JSON.stringify(query)}`);
+      throw Error(`
+        Could not findTradeAndUpdate
+        ${filename.substr(filename.lastIndexOf('/') + 1)}
+        by query
+        ${JSON.stringify(query)}`);
     }
     const newAmount = Number(found.amount) - Number(soldTokens);
     const updateOrder = {
@@ -482,13 +482,19 @@ class DBHelper {
     let fieldsObj;
     if (!_.isEmpty(fields)) {
       fieldsObj = {};
-      _.each(fields, (field) => fieldsObj[field] = 1);
+      _.each(fields, (field) => {
+        fieldsObj[field] = 1;
+      });
     }
 
     const found = await database.findOne(query, fieldsObj);
     if (!found) {
       const { filename } = database.nedb;
-      throw Error(`Could not findOne ${filename.substr(filename.lastIndexOf('/') + 1)} by query ${JSON.stringify(query)}`);
+      throw Error(`
+        Could not findOne
+        ${filename.substr(filename.lastIndexOf('/') + 1)}
+        by query
+        ${JSON.stringify(query)}`);
     }
     return found;
   }
@@ -503,7 +509,9 @@ class DBHelper {
     let fieldsObj;
     if (!_.isEmpty(fields)) {
       fieldsObj = {};
-      _.each(fields, (field) => fieldsObj[field] = 1);
+      _.each(fields, (field) => {
+        fieldsObj[field] = 1;
+      });
     }
 
     const found = await database.find(query, fieldsObj);
