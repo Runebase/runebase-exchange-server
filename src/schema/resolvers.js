@@ -3,7 +3,7 @@ const moment = require('moment');
 const math = require('mathjs');
 const BigNumber = require('bignumber.js');
 const { withFilter } = require('graphql-subscriptions');
-
+const { forEach } = require('p-iteration');
 const pubsub = require('../pubsub');
 const {
   sendTradeInfo, sendFundRedeemInfo, sendSellHistoryInfo, sendBuyHistoryInfo, sendActiveOrderInfo,
@@ -691,17 +691,18 @@ module.exports = {
           throw err;
         }
       }
-      for (const key in markets) {
-        if (token === markets[key].market) {
+
+      await forEach(markets, async (key) => {
+        if (token === key.market) {
           try {
             sentTx = await Token.transfer({
               to: receiverAddress,
               value: amount,
               senderAddress,
-              token: markets[key].market,
-              tokenAddress: markets[key].address,
-              abi: MetaData.TokenAbi[markets[key].abi],
-              RrcVersion: markets[key].abi,
+              token: key.market,
+              tokenAddress: key.address,
+              abi: MetaData.TokenAbi[key.abi],
+              RrcVersion: key.abi,
             });
             txid = sentTx.txid;
           } catch (err) {
@@ -709,7 +710,28 @@ module.exports = {
             throw err;
           }
         }
-      }
+      });
+
+      // for (const key in markets) {
+      //  if (token === markets[key].market) {
+      //    try {
+      //      sentTx = await Token.transfer({
+      //        to: receiverAddress,
+      //        value: amount,
+      //        senderAddress,
+      //        token: markets[key].market,
+      //        tokenAddress: markets[key].address,
+      //        abi: MetaData.TokenAbi[markets[key].abi],
+      //        RrcVersion: markets[key].abi,
+      //      });
+      //      txid = sentTx.txid;
+      //    } catch (err) {
+      //      getLogger().error(`Error calling Token.transfer: ${err.message}`);
+      //      throw err;
+      //    }
+      //  }
+      // }
+
       // Insert Transaction
       const gasLimit = sentTx ? sentTx.args.gasLimit : Config.DEFAULT_GAS_LIMIT;
       const gasPrice = sentTx ? sentTx.args.gasPrice : Config.DEFAULT_GAS_PRICE;
@@ -746,6 +768,8 @@ module.exports = {
       let sentTx;
       let pendingAmount;
 
+      console.log(amount);
+
       if (token === MetaData.BaseCurrency.Pair) {
         try {
           txid = await exchange.depositExchangeBaseCurrency({
@@ -754,43 +778,64 @@ module.exports = {
             senderAddress,
             abi: MetaData.Exchange.Abi,
           });
+
+          pendingAmount = amount.toString();
         } catch (err) {
           getLogger().error(`Error calling exchange.fund: ${err.message}`);
           throw err;
         }
       }
-      for (const key in markets) {
-        if (token === markets[key].market) {
+
+      await forEach(markets, async (key) => {
+        if (token === key.market) {
           try {
             sentTx = await Token.transfer({
               to: exchangeAddress,
               value: amount,
               senderAddress,
-              token: markets[key].market,
-              tokenAddress: markets[key].address,
-              abi: MetaData.TokenAbi[markets[key].abi],
-              RrcVersion: markets[key].abi,
+              token: key.market,
+              tokenAddress: key.address,
+              abi: MetaData.TokenAbi[key.abi],
+              RrcVersion: key.abi,
             });
             txid = sentTx.txid;
+            pendingAmount = new BigNumber(amount).dividedBy(10 ** key.decimals).toString();
           } catch (err) {
             getLogger().error(`Error calling Token.transfer: ${err.message}`);
             throw err;
           }
         }
-      }
+      });
 
-      if (token === MetaData.BaseCurrency.Pair) {
-        pendingAmount = amount;
-      } else {
-        pendingAmount = parseFloat(new BigNumber(amount).dividedBy(SATOSHI_CONVERSION));
-      }
+      console.log(txid);
+      // for (const key in markets) {
+      //  if (token === markets[key].market) {
+      //    try {
+      //      sentTx = await Token.transfer({
+      //        to: exchangeAddress,
+      //        value: amount,
+      //        senderAddress,
+      //        token: markets[key].market,
+      //        tokenAddress: markets[key].address,
+      //        abi: MetaData.TokenAbi[markets[key].abi],
+      //        RrcVersion: markets[key].abi,
+      //      });
+      //      txid = sentTx.txid;
+      //    } catch (err) {
+      //      getLogger().error(`Error calling Token.transfer: ${err.message}`);
+      //      throw err;
+      //    }
+      //  }
+      // }
+
+
       getLogger().debug(`Token Deposit${token}`);
-      getLogger().debug(`New Big Number Deposit: ${new BigNumber(amount).dividedBy(SATOSHI_CONVERSION).toString()}`);
+      getLogger().debug(`New Big Number Deposit: ${amount}`);
       // Insert Transaction
       const gasLimit = sentTx ? sentTx.args.gasLimit : Config.DEFAULT_GAS_LIMIT;
       const gasPrice = sentTx ? sentTx.args.gasPrice : Config.DEFAULT_GAS_PRICE;
       const deposit = {
-        txid,
+        txid: txid,
         version,
         senderAddress,
         type: 'DEPOSITEXCHANGE',
@@ -823,7 +868,7 @@ module.exports = {
       const version = Config.CONTRACT_VERSION_NUM;
       let txid;
       let sentTx;
-      let tokenaddress;
+      let pendingAmount;
 
       if (token === MetaData.BaseCurrency.Pair) {
         try {
@@ -835,28 +880,50 @@ module.exports = {
             senderAddress,
             abi: MetaData.Exchange.Abi,
           });
+          pendingAmount = new BigNumber(amount).dividedBy(10 ** 8).toString();
         } catch (err) {
           getLogger().error(`Error calling redeemExchange: ${err.message}`);
           throw err;
         }
       }
-      for (const redeemExchangeToken in markets) {
-        if (token === markets[redeemExchangeToken].market) {
+
+
+      await forEach(markets, async (redeemExchangeToken) => {
+        if (token === redeemExchangeToken.market) {
           try {
             txid = await exchange.redeemExchange({
               exchangeAddress: MetaData.Exchange.Address,
               amount,
               token,
-              tokenaddress: markets[redeemExchangeToken].address,
+              tokenaddress: redeemExchangeToken.address,
               senderAddress,
               abi: MetaData.Exchange.Abi,
             });
+            pendingAmount = new BigNumber(amount).dividedBy(10 ** redeemExchangeToken.decimals).toString();
           } catch (err) {
             getLogger().error(`Error calling redeemExchange: ${err.message}`);
             throw err;
           }
         }
-      }
+      });
+
+      // for (const redeemExchangeToken in markets) {
+      //  if (token === markets[redeemExchangeToken].market) {
+      //    try {
+      //      txid = await exchange.redeemExchange({
+      //        exchangeAddress: MetaData.Exchange.Address,
+      //        amount,
+      //        token,
+      //        tokenaddress: markets[redeemExchangeToken].address,
+      //        senderAddress,
+      //        abi: MetaData.Exchange.Abi,
+      //      });
+      //    } catch (err) {
+      //      getLogger().error(`Error calling redeemExchange: ${err.message}`);
+      //      throw err;
+      //    }
+      //  }
+      // }
 
       // Insert Transaction
       const gasLimit = sentTx ? sentTx.args.gasLimit : Config.DEFAULT_GAS_LIMIT;
@@ -876,7 +943,7 @@ module.exports = {
         receiverAddress,
         token,
         tokenName: token,
-        amount: new BigNumber(amount).dividedBy(SATOSHI_CONVERSION).toString(),
+        amount: pendingAmount,
       };
       getLogger().debug(JSON.stringify(withdrawal));
       sendFundRedeemInfo(withdrawal);
@@ -905,17 +972,29 @@ module.exports = {
       const priceFractN = priceFract.n;
       const priceFractD = priceFract.d;
 
-      for (const TokenName in markets) {
-        if (token === markets[TokenName].market) {
+      await forEach(markets, async (TokenName) => {
+        if (token === TokenName.market) {
           try {
-            tokenAddress = markets[TokenName].address;
-            decimals = markets[TokenName].decimals;
+            tokenAddress = TokenName.address;
+            decimals = TokenName.decimals;
           } catch (err) {
             getLogger().error(`Error calling MetaData['Tokens'][${TokenName}]: ${err.message}`);
             throw err;
           }
         }
-      }
+      });
+
+      // for (const TokenName in markets) {
+      //  if (token === markets[TokenName].market) {
+      //    try {
+      //      tokenAddress = markets[TokenName].address;
+      //      decimals = markets[TokenName].decimals;
+      //    } catch (err) {
+      //      getLogger().error(`Error calling MetaData['Tokens'][${TokenName}]: ${err.message}`);
+      //      throw err;
+      //    }
+      //  }
+      // }
 
       try {
         txid = await exchange.orderExchange({
@@ -1064,7 +1143,6 @@ module.exports = {
 
       const trade = {
         tokenAddress: getOrder.tokenAddress,
-        type: getOrder.orderType,
         txid,
         type: 'EXECUTEORDER',
         status: 'PENDING',

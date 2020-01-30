@@ -23,18 +23,19 @@ class NewOrder {
   decode() {
     this.tokenAddress = this.rawLog._token.substring(2);
     this.owner = this.rawLog._owner.substring(2);
-    this.amount = new BigNumber(this.rawLog._amount).dividedBy(SATOSHI_CONVERSION).toString(10);
     this.time = this.rawLog._time.toString(10);
     if (this.tokenAddress === this.baseCurrency.Address) {
       console.log('DEPOSIT/WITHDRAW RUNES');
       this.token = this.baseCurrency.Pair;
       this.tokenName = this.baseCurrency.Name;
+      this.amount = new BigNumber(this.rawLog._amount).dividedBy(10 ** 8).toString(10);
     }
     Object.keys(this.tokens).forEach((key) => {
       if (this.tokens[key].address === this.tokenAddress) {
         console.log(`DEPOSIT/WITHDRAW ${this.tokens[key].market}`);
         this.token = this.tokens[key].market;
         this.tokenName = this.tokens[key].tokenName;
+        this.amount = new BigNumber(this.rawLog._amount).dividedBy(10 ** this.tokens[key].decimals).toString(10);
       }
     });
     if (this.rawLog._eventName === 'Deposit') {

@@ -1,5 +1,17 @@
 const pubsub = require('./pubsub');
 
+const sendSyncInfo = (syncBlockNum, syncBlockTime, syncPercent, peerNodeCount, addressBalances) => {
+  pubsub.publish('onSyncInfo', {
+    onSyncInfo: {
+      syncBlockNum,
+      syncBlockTime,
+      syncPercent,
+      peerNodeCount,
+      addressBalances,
+    },
+  });
+};
+
 const sendTradeInfo = (trade) => {
   pubsub.publish('onMyTradeInfo', {
     onMyTradeInfo: {
@@ -230,6 +242,7 @@ const sendChartInfo = (chart) => {
 };
 
 module.exports = {
+  sendSyncInfo,
   sendTradeInfo,
   sendFundRedeemInfo,
   sendSellHistoryInfo,

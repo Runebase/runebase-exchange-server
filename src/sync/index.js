@@ -1,12 +1,11 @@
-/* eslint no-underscore-dangle: [2, { "allow": ["_eventName", "_address", "_time"] }] */
-const fs = require('fs-extra');
+/* eslint no-underscore-dangle: [2, { "allow": ["_eventName", "_address", "_time", "_orderId"] }] */
 const _ = require('lodash');
 const moment = require('moment');
 const BigNumber = require('bignumber.js');
 const { forEach } = require('p-iteration');
 const abi = require('ethjs-abi');
-const pubsub = require('../pubsub');
 const {
+  sendSyncInfo,
   sendTradeInfo,
   sendFundRedeemInfo,
   sendSellHistoryInfo,
@@ -88,7 +87,7 @@ const updateEmptyCandles = async () => {
   const timeNow = parseInt(moment().unix(), 10);
 
   /* p-iteration example */
-  // await forEach(markets, async market) => {
+  // await forEach(markets, async (market) => {
   //  await forEach(timeTable, async (t) => {
   //    await insertEmptyCandles(timeNow, t, market.address);
   //  });
@@ -101,7 +100,7 @@ const updateEmptyCandles = async () => {
   });
 };
 
-function sequentialLoop(iterations, process, exit) {
+const sequentialLoop = (iterations, process, exit) => {
   let index = 0;
   let done = false;
   let shouldExit = false;
@@ -137,102 +136,9 @@ function sequentialLoop(iterations, process, exit) {
   };
   loop.next();
   return loop;
-}
-
-const startSync = async () => {
-  MetaData = await getContractMetadata();
-  senderAddress = isMainnet() ? 'RKBLGRvYqunBtpueEPuXzQQmoVsQQTvd3a' : '5VMGo2gGHhkW5TvRRtcKM1RkyUgrnNP7dn';
-  sync();
 };
 
-async function sync() {
-  const removeHexPrefix = true;
-  const currentBlockCount = Math.max(0, await getInstance().getBlockCount());
-  const currentBlockHash = await getInstance().getBlockHash(currentBlockCount);
-  const currentBlockTime = (await getInstance().getBlock(currentBlockHash)).time;
-
-  // Start sync based on last block written to DB
-  let startBlock = MetaData.contractDeployedBlock;
-  const blocks = await db.Blocks.cfind({}).sort({ blockNum: -1 }).limit(1).exec();
-  if (blocks.length > 0) {
-    startBlock = Math.max(blocks[0].blockNum + 1, startBlock);
-  }
-
-  const numOfIterations = Math.ceil(((currentBlockCount - startBlock) + 1) / BLOCK_BATCH_SIZE);
-
-  sequentialLoop(
-    numOfIterations,
-    async (loop) => {
-      await updateStatusDB.updatePendingTxs(db, currentBlockCount);
-      getLogger().debug('Tx DB Updated');
-
-      await updateStatusDB.updatePendingOrders(db, currentBlockCount);
-      getLogger().debug('Order DB Updated');
-
-      await updateStatusDB.updatePendingFundRedeems(db, currentBlockCount);
-      getLogger().debug('FundRedeem DB Updated');
-
-      await updateStatusDB.updatePendingTrades(db, currentBlockCount);
-      getLogger().debug('Trades DB Updated');
-
-      const endBlock = Math.min((startBlock + BLOCK_BATCH_SIZE) - 1, currentBlockCount);
-
-      await syncTokenListingCreated(startBlock, endBlock, removeHexPrefix);
-      getLogger().debug('Synced syncTokenListingCreated');
-
-      await syncTokenListingUpdated(startBlock, endBlock, removeHexPrefix);
-      getLogger().debug('Synced syncTokenListingUpdated');
-
-      await syncTokenListingDeleted(startBlock, endBlock, removeHexPrefix);
-      getLogger().debug('Synced syncTokenListingDeleted');
-
-      await syncFundRedeem(startBlock, endBlock, removeHexPrefix);
-      getLogger().debug('Synced FundRedeem');
-
-      await syncNewOrder(startBlock, endBlock, removeHexPrefix);
-      getLogger().debug('Synced NewOrder');
-
-      await syncMarketMaker(startBlock, endBlock, removeHexPrefix);
-      getLogger().debug('Synced syncMarketMaker');
-
-      await syncOrderCancelled(startBlock, endBlock, removeHexPrefix);
-      getLogger().debug('Synced syncOrderCancelled');
-
-      await syncOrderFulfilled(startBlock, endBlock, removeHexPrefix);
-      getLogger().debug('Synced syncOrderFulfilled');
-
-      await syncMarkets();
-      getLogger().debug('Synced markets');
-
-      await syncTrade(startBlock, endBlock, removeHexPrefix);
-      getLogger().debug('Synced syncTrade');
-
-
-      const { insertBlockPromises } = await getInsertBlockPromises(startBlock, endBlock);
-      await Promise.all(insertBlockPromises);
-      getLogger().debug('Inserted Blocks');
-
-      startBlock = endBlock + 1;
-      loop.next();
-    },
-    async () => {
-      if (numOfIterations > 0) {
-        sendSyncInfo(
-          currentBlockCount,
-          currentBlockTime,
-          await calculateSyncPercent(currentBlockCount, currentBlockTime),
-          await network.getPeerNodeCount(),
-          await getAddressBalances(),
-        );
-      }
-      getLogger().debug('sleep');
-      setTimeout(startSync, 5000);
-      await updateEmptyCandles();
-    },
-  );
-}
-
-async function syncTokenListingCreated(startBlock, endBlock, removeHexPrefix) {
+const syncTokenListingCreated = async (startBlock, endBlock, removeHexPrefix) => {
   let result;
   const ListingCreatedPromises = [];
   try {
@@ -310,10 +216,9 @@ async function syncTokenListingCreated(startBlock, endBlock, removeHexPrefix) {
     });
   });
   await Promise.all(ListingCreatedPromises);
-}
+};
 
-async function syncTokenListingUpdated(startBlock, endBlock, removeHexPrefix) {
-  const blockchainDataPath = Utils.getDataDir();
+const syncTokenListingUpdated = async (startBlock, endBlock, removeHexPrefix) => {
   let result;
   const ListingUpdatedPromises = [];
   try {
@@ -342,32 +247,7 @@ async function syncTokenListingUpdated(startBlock, endBlock, removeHexPrefix) {
             const market = new Market(OutputBytecode).translate();
             const marketAddress = market.address;
 
-            if (await DBHelper.getCount(db.Markets, { address: marketAddress }) > 0) {
-              const getMarket = await DBHelper.findOne(db.Markets, { address: marketAddress });
-              // / Rename Chart File
-              const oldSrc = `${blockchainDataPath}/${getMarket.market}.tsv`;
-              const newSrc = `${blockchainDataPath}/${market.market}.tsv`;
-              if (oldSrc !== newSrc) {
-                fs.rename(oldSrc, newSrc, (err) => {
-                  if (err) throw err;
-                });
-              }
-              await DBHelper.updateMarketByQuery(db.Markets, { address: marketAddress }, market);
-              // /
-            } else {
-              db.Markets.insert(market).then((value) => {
-                // / init Chart File
-                const addMarket = market.market;
-                const dataSrc = `${blockchainDataPath}/${addMarket}.tsv`;
-                if (!fs.existsSync(dataSrc)) {
-                  fs.writeFile(dataSrc, 'date\topen\thigh\tlow\tclose\tvolume\n2018-01-01\t0\t0\t0\t0\t0\n2018-01-02\t0\t0\t0\t0\t0\n', { flag: 'w' }, (err) => {
-                    if (err) return console.error(err);
-                  });
-                }
-                fs.closeSync(fs.openSync(dataSrc, 'a'));
-                // /
-              });
-            }
+            await DBHelper.changeMarketByQuery(db.Charts, { tokenAddress: marketAddress }, market);
             await DBHelper.changeMarketByQuery(db.NewOrder, { sellToken: marketAddress }, market);
             await DBHelper.changeMarketByQuery(db.NewOrder, { buyToken: marketAddress }, market);
             await DBHelper.changeMarketByQuery(db.OrderFulfilled, { sellToken: marketAddress }, market);
@@ -385,9 +265,9 @@ async function syncTokenListingUpdated(startBlock, endBlock, removeHexPrefix) {
     });
   });
   await Promise.all(ListingUpdatedPromises);
-}
+};
 
-async function syncTokenListingDeleted(startBlock, endBlock, removeHexPrefix) {
+const syncTokenListingDeleted = async (startBlock, endBlock, removeHexPrefix) => {
   let result;
   const ListingUpdatedPromises = [];
   try {
@@ -437,10 +317,10 @@ async function syncTokenListingDeleted(startBlock, endBlock, removeHexPrefix) {
     });
   });
   await Promise.all(ListingUpdatedPromises);
-}
+};
 
 // Gets all promises for new blocks to insert
-async function getInsertBlockPromises(startBlock, endBlock) {
+const getInsertBlockPromises = async (startBlock, endBlock) => {
   let blockHash;
   let blockTime;
   const insertBlockPromises = [];
@@ -468,9 +348,9 @@ async function getInsertBlockPromises(startBlock, endBlock) {
   }
 
   return { insertBlockPromises, endBlockTime: blockTime };
-}
+};
 
-async function peerHighestSyncedHeader() {
+const peerHighestSyncedHeader = async () => {
   let peerBlockHeader = null;
   try {
     const res = await getInstance().getPeerInfo();
@@ -485,9 +365,9 @@ async function peerHighestSyncedHeader() {
   }
 
   return peerBlockHeader;
-}
+};
 
-async function calculateSyncPercent(blockCount, blockTime) {
+const calculateSyncPercent = async (blockCount, blockTime) => {
   const peerBlockHeader = await peerHighestSyncedHeader();
   if (_.isNull(peerBlockHeader)) {
     // estimate by blockTime
@@ -501,22 +381,9 @@ async function calculateSyncPercent(blockCount, blockTime) {
   }
 
   return Math.floor((blockCount / peerBlockHeader) * 100);
-}
+};
 
-// Send syncInfo subscription
-function sendSyncInfo(syncBlockNum, syncBlockTime, syncPercent, peerNodeCount, addressBalances) {
-  pubsub.publish('onSyncInfo', {
-    onSyncInfo: {
-      syncBlockNum,
-      syncBlockTime,
-      syncPercent,
-      peerNodeCount,
-      addressBalances,
-    },
-  });
-}
-
-async function getAddressBalances() {
+const getAddressBalances = async () => {
   const addressObjs = [];
   const addressList = [];
   try {
@@ -624,7 +491,6 @@ async function getAddressBalances() {
         const StringPromise = new Promise(async (StringResolve) => {
           try {
             const found = await _.find(addressObjs, { address });
-            console.log(found);
             found.balance = JSON.stringify(found);
             StringResolve();
           } catch (err) {
@@ -653,8 +519,8 @@ async function getAddressBalances() {
           try {
             console.log(`${err.response.status}: No Wallet found, Creating new...`);
             address = await wallet.getNewAddress('default');
-          } catch (err) {
-            console.log(err);
+          } catch (error) {
+            console.log(error);
           }
         }
       }
@@ -690,10 +556,10 @@ async function getAddressBalances() {
   addressObjs.balance = addressObjstring;
 
   return addressObjs;
-}
+};
 
 
-async function syncNewOrder(startBlock, endBlock, removeHexPrefix) {
+const syncNewOrder = async (startBlock, endBlock, removeHexPrefix) => {
   let result;
   const createNewOrderPromises = [];
   const markets = await db.Markets.find({});
@@ -747,9 +613,9 @@ async function syncNewOrder(startBlock, endBlock, removeHexPrefix) {
     });
   });
   await Promise.all(createNewOrderPromises);
-}
+};
 
-async function syncOrderCancelled(startBlock, endBlock, removeHexPrefix) {
+const syncOrderCancelled = async (startBlock, endBlock, removeHexPrefix) => {
   let result;
   try {
     result = await getInstance().searchLogs(
@@ -793,9 +659,9 @@ async function syncOrderCancelled(startBlock, endBlock, removeHexPrefix) {
   });
 
   await Promise.all(createCancelOrderPromises);
-}
+};
 
-async function syncOrderFulfilled(startBlock, endBlock, removeHexPrefix) {
+const syncOrderFulfilled = async (startBlock, endBlock, removeHexPrefix) => {
   let result;
   try {
     result = await getInstance().searchLogs(
@@ -843,9 +709,9 @@ async function syncOrderFulfilled(startBlock, endBlock, removeHexPrefix) {
   });
 
   await Promise.all(createFulfillOrderPromises);
-}
+};
 
-async function addTrade(rawLog, blockNum, txid) {
+const addTrade = async (rawLog, blockNum, txid) => {
   const getOrder = await DBHelper.findOne(db.NewOrder, { orderId: rawLog._orderId.toString(10) });
   const trade = new Trade(blockNum, txid, rawLog, getOrder).translate();
   const orderId = trade.orderId;
@@ -936,7 +802,7 @@ async function addTrade(rawLog, blockNum, txid) {
   } catch (err) {
     getLogger().error(`ERROR: ${err.message}`);
   }
-}
+};
 
 async function topicFiller(topics) {
   try {
@@ -950,7 +816,7 @@ async function topicFiller(topics) {
   }
 }
 
-async function syncTrade(startBlock, endBlock, removeHexPrefix) {
+const syncTrade = async (startBlock, endBlock, removeHexPrefix) => {
   let topics;
   let data;
   let result;
@@ -995,14 +861,14 @@ async function syncTrade(startBlock, endBlock, removeHexPrefix) {
   //    }
   //  }
   // }
-}
+};
 
-function getPercentageChange(oldNumber, newNumber) {
+const getPercentageChange = (oldNumber, newNumber) => {
   const decreaseValue = oldNumber - newNumber;
   return (decreaseValue / oldNumber) * 100;
-}
+};
 
-async function syncMarkets() {
+const syncMarkets = async () => {
   const createMarketPromises = [];
   const marketDB = new Promise(async (resolve) => {
     try {
@@ -1086,9 +952,9 @@ async function syncMarkets() {
   });
   createMarketPromises.push(marketDB);
   await Promise.all(createMarketPromises);
-}
+};
 
-async function syncFundRedeem(startBlock, endBlock, removeHexPrefix) {
+const syncFundRedeem = async (startBlock, endBlock, removeHexPrefix) => {
   let resultFund;
   let resultRedeem;
   try {
@@ -1181,9 +1047,9 @@ async function syncFundRedeem(startBlock, endBlock, removeHexPrefix) {
 
   await Promise.all(createFundPromises);
   await Promise.all(createRedeemPromises);
-}
+};
 
-async function syncMarketMaker(startBlock, endBlock, removeHexPrefix) {
+const syncMarketMaker = async (startBlock, endBlock, removeHexPrefix) => {
   let result;
   try {
     result = await getInstance().searchLogs(
@@ -1222,6 +1088,99 @@ async function syncMarketMaker(startBlock, endBlock, removeHexPrefix) {
   });
 
   await Promise.all(createMarketMakerPromises);
+};
+
+const sync = async () => {
+  const removeHexPrefix = true;
+  const currentBlockCount = Math.max(0, await getInstance().getBlockCount());
+  const currentBlockHash = await getInstance().getBlockHash(currentBlockCount);
+  const currentBlockTime = (await getInstance().getBlock(currentBlockHash)).time;
+
+  // Start sync based on last block written to DB
+  let startBlock = MetaData.contractDeployedBlock;
+  const blocks = await db.Blocks.cfind({}).sort({ blockNum: -1 }).limit(1).exec();
+  if (blocks.length > 0) {
+    startBlock = Math.max(blocks[0].blockNum + 1, startBlock);
+  }
+
+  const numOfIterations = Math.ceil(((currentBlockCount - startBlock) + 1) / BLOCK_BATCH_SIZE);
+
+  sequentialLoop(
+    numOfIterations,
+    async (loop) => {
+      await updateStatusDB.updatePendingTxs(db, currentBlockCount);
+      getLogger().debug('Tx DB Updated');
+
+      await updateStatusDB.updatePendingOrders(db, currentBlockCount);
+      getLogger().debug('Order DB Updated');
+
+      await updateStatusDB.updatePendingFundRedeems(db, currentBlockCount);
+      getLogger().debug('FundRedeem DB Updated');
+
+      await updateStatusDB.updatePendingTrades(db, currentBlockCount);
+      getLogger().debug('Trades DB Updated');
+
+      const endBlock = Math.min((startBlock + BLOCK_BATCH_SIZE) - 1, currentBlockCount);
+
+      await syncTokenListingCreated(startBlock, endBlock, removeHexPrefix);
+      getLogger().debug('Synced syncTokenListingCreated');
+
+      await syncTokenListingUpdated(startBlock, endBlock, removeHexPrefix);
+      getLogger().debug('Synced syncTokenListingUpdated');
+
+      await syncTokenListingDeleted(startBlock, endBlock, removeHexPrefix);
+      getLogger().debug('Synced syncTokenListingDeleted');
+
+      await syncFundRedeem(startBlock, endBlock, removeHexPrefix);
+      getLogger().debug('Synced FundRedeem');
+
+      await syncNewOrder(startBlock, endBlock, removeHexPrefix);
+      getLogger().debug('Synced NewOrder');
+
+      await syncMarketMaker(startBlock, endBlock, removeHexPrefix);
+      getLogger().debug('Synced syncMarketMaker');
+
+      await syncOrderCancelled(startBlock, endBlock, removeHexPrefix);
+      getLogger().debug('Synced syncOrderCancelled');
+
+      await syncOrderFulfilled(startBlock, endBlock, removeHexPrefix);
+      getLogger().debug('Synced syncOrderFulfilled');
+
+      await syncMarkets();
+      getLogger().debug('Synced markets');
+
+      await syncTrade(startBlock, endBlock, removeHexPrefix);
+      getLogger().debug('Synced syncTrade');
+
+
+      const { insertBlockPromises } = await getInsertBlockPromises(startBlock, endBlock);
+      await Promise.all(insertBlockPromises);
+      getLogger().debug('Inserted Blocks');
+
+      startBlock = endBlock + 1;
+      loop.next();
+    },
+    async () => {
+      if (numOfIterations > 0) {
+        sendSyncInfo(
+          currentBlockCount,
+          currentBlockTime,
+          await calculateSyncPercent(currentBlockCount, currentBlockTime),
+          await network.getPeerNodeCount(),
+          await getAddressBalances(),
+        );
+      }
+      getLogger().debug('sleep');
+      setTimeout(startSync, 5000);
+      await updateEmptyCandles();
+    },
+  );
+};
+
+async function startSync() {
+  MetaData = await getContractMetadata();
+  senderAddress = isMainnet() ? 'RKBLGRvYqunBtpueEPuXzQQmoVsQQTvd3a' : '5VMGo2gGHhkW5TvRRtcKM1RkyUgrnNP7dn';
+  sync();
 }
 
 module.exports = {
