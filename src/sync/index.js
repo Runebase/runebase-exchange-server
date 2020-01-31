@@ -833,34 +833,43 @@ const syncTrade = async (startBlock, endBlock, removeHexPrefix) => {
 
   getLogger().debug(`${startBlock} - ${endBlock}: Retrieved ${result.length} entries from syncTrade`);
 
-  await forEach(result, async (event) => {
-    const blockNum = event.blockNumber;
-    const txid = event.transactionHash;
-    await forEach(event.log, async (rawLog) => {
-      topics = rawLog.topics.map((i) => `0x${i}`);
-      data = `0x${rawLog.data}`;
-      topics = await topicFiller(topics);
-      const OutputBytecode = await abi.decodeEvent(MetaData.Exchange.Abi[20], data, topics);
-
-      if (OutputBytecode._eventName === 'Trade' && parseInt(OutputBytecode._time.toString(10), 10) !== 0) {
-        await addTrade(OutputBytecode, blockNum, txid);
-      }
-    });
-  });
-
-  // for (const event of result) {
+  //await forEach(result, async (event) => {
   //  const blockNum = event.blockNumber;
   //  const txid = event.transactionHash;
-  //  for (const rawLog of event.log) {
-  //    topics = rawLog.topics.map((i) => `0x${i}`);
-  //    data = `0x${rawLog.data}`;
-  //    topics = await topicFiller(topics);
-  //    const OutputBytecode = await abi.decodeEvent(MetaData.Exchange.Abi[20], data, topics);
-  //   if (OutputBytecode._eventName === 'Trade' && parseInt(OutputBytecode._time.toString(10), 10) !== 0) {
-  //      await addTrade(OutputBytecode, blockNum, txid);
+  //  await forEach(event.log, async (rawLog) => {
+  //    try {
+  //      topics = rawLog.topics.map((i) => `0x${i}`);
+  //      data = `0x${rawLog.data}`;
+  //      topics = await topicFiller(topics);
+  //      const OutputBytecode = await abi.decodeEvent(MetaData.Exchange.Abi[20], data, topics);
+  //      if (OutputBytecode._eventName === 'Trade' && parseInt(OutputBytecode._time.toString(10), 10) !== 0) {
+  //        await addTrade(OutputBytecode, blockNum, txid);
+  //      }
+  //    } catch (error) {
+  //      getLogger().error(`ERROR: ${error.message}`);
+  //      return;
   //    }
-  //  }
-  // }
+  //  });
+  //});
+
+  for (const event of result) {
+    const blockNum = event.blockNumber;
+    const txid = event.transactionHash;
+    for (const rawLog of event.log) {
+      try {
+        topics = rawLog.topics.map((i) => `0x${i}`);
+        data = `0x${rawLog.data}`;
+        topics = await topicFiller(topics);
+        const OutputBytecode = await abi.decodeEvent(MetaData.Exchange.Abi[20], data, topics);
+        if (OutputBytecode._eventName === 'Trade' && parseInt(OutputBytecode._time.toString(10), 10) !== 0) {
+          await addTrade(OutputBytecode, blockNum, txid);
+        }
+      } catch (error) {
+        getLogger().error(`ERROR: ${error.message}`);
+        return;
+      }
+    }
+  }
 };
 
 const getPercentageChange = (oldNumber, newNumber) => {
