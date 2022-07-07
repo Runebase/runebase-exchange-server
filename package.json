@@ -33,7 +33,7 @@
     "graphql-tools": "^4.0.6",
     "lodash": "^4.17.10",
     "mathjs": "^6.5.0",
-    "moment": "^2.22.2",
+    "moment": "^2.29.4",
     "nedb-promise": "^2.0.1",
     "node-fetch": "^2.2.0",
     "p-iteration": "^1.1.8",
